@@ -1,0 +1,147 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: commerceops-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_data:/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: commerceops-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CHROMA_DIR=/app/data/chroma
+      - SQLITE_DB_PATH=/app/data/commerceops.db
+      - CHECKPOINT_DB_PATH=/app/data/checkpoints.db
+      - KNOWLEDGE_GRAPH_PATH=/app/data/knowledge_graph.json
+      - INTENT_ROUTER_MODEL_PATH=/app/data/intent_router.joblib
+      - MCP_SQLITE_DB_PATH=/app/data/commerceops.db
+      - PHOENIX_COLLECTOR_ENDPOINT=http://phoenix:6006/v1/traces
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - backend_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: commerceops-worker
+    command: ["python", "-m", "app.worker"]
+    env_file:
+      - ./backend/.env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CHROMA_DIR=/app/data/chroma
+      - SQLITE_DB_PATH=/app/data/commerceops.db
+      - CHECKPOINT_DB_PATH=/app/data/checkpoints.db
+      - KNOWLEDGE_GRAPH_PATH=/app/data/knowledge_graph.json
+      - INTENT_ROUTER_MODEL_PATH=/app/data/intent_router.joblib
+      - MCP_SQLITE_DB_PATH=/app/data/commerceops.db
+      - PHOENIX_COLLECTOR_ENDPOINT=http://phoenix:6006/v1/traces
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    volumes:
+      - backend_data:/app/data
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: commerceops-frontend
+    environment:
+      - API_BASE_URL=http://backend:8000
+      - GRAFANA_URL=http://localhost:3000/d/commerceops/commerceops-overview
+    ports:
+      - "8501:8501"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: commerceops-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: commerceops-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=commerceops
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards/json
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: commerceops-n8n
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - COMMERCEOPS_API_BASE_URL=http://backend:8000
+      - SLACK_INCOMING_WEBHOOK_URL=${SLACK_INCOMING_WEBHOOK_URL:-}
+      - GENERIC_TIMEZONE=UTC
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n:/home/node/workflows:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: commerceops-phoenix
+    ports:
+      - "6006:6006"   # UI + OTLP HTTP collector
+      - "4317:4317"   # OTLP gRPC collector
+    volumes:
+      - phoenix_data:/mnt/data
+    environment:
+      - PHOENIX_WORKING_DIR=/mnt/data
+
+volumes:
+  redis_data:
+  backend_data:
+  prometheus_data:
+  grafana_data:
+  n8n_data:
+  phoenix_data:
