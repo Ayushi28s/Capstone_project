@@ -1,93 +1,81 @@
 """
 CommerceOps AI — Approval Queue.
-Paused sessions at human_approval_gate show here.
+
+Every session paused at the human_approval_gate interrupt shows here,
+including which NorthPeak employee submitted it, on behalf of which
+customer, and the original request text — a manager reviewing this
+queue needs that context, not just a session ID. Approving or rejecting
+resumes the LangGraph thread from its checkpoint — survives a worker
+restart, not just a log line.
 """
 import streamlit as st
 
 from api_client import approve_chat, list_sessions
-from style import header, inject, status_pill
+from style import header, inject
 
-st.set_page_config(
-    page_title="Approval Queue",
-    page_icon="✅",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+st.set_page_config(page_title="CommerceOps AI | Approval Queue", page_icon="✅", layout="wide")
 inject()
 
-# SUB-PAGE HEADER: Clean title without brand prefix
-header(
-    "HUMAN APPROVAL QUEUE",
-    "High-value refunds (≥ $250) and flagged security anomalies pause here for manual sign-off",
-    is_first_page=False,
-)
+with st.sidebar:
+    st.markdown("### 👤 Active Persona")
+    st.selectbox(
+        "Select Demo Role:",
+        [
+            "Operations Manager (Full Access)",
+            "Tier 1 Support Specialist",
+            "Merchandising Analyst",
+        ],
+        key="user_role",
+    )
+    st.divider()
+
+active_role = st.session_state.get("user_role", "Operations Manager (Full Access)")
+
+header(" Human Approval Queue", "Refunds ≥ $250 and flagged anomalies pause here until a manager decides.")
+
+# Role-Based Access Control Gate: ONLY Operations Manager is allowed
+if active_role != "Operations Manager (Full Access)":
+    st.error(f"🔒 **Access Restricted**: `{active_role}` does not have manager approval privileges.")
+    st.stop()
 
 sessions = list_sessions()
-pending = [s for s in sessions if s.get("status") == "awaiting_approval"] if sessions else []
+pending = [s for s in sessions if s["status"] == "awaiting_approval"]
 
 if not pending:
-    st.markdown(
-        """
-        <div class="coa-card" style="text-align: center; padding: 2.5rem;">
-            <h3 style="margin-bottom: 0.5rem; font-weight: 300;">Queue Clear</h3>
-            <p style="margin: 0;">No requests are currently awaiting human review.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.success("Nothing waiting on review right now.")
 else:
-    st.markdown(f"#### Pending Approvals ({len(pending)})")
-    
+    st.caption(f"{len(pending)} request(s) awaiting a decision.")
     for s in pending:
         session_id = s["session_id"]
-        
         with st.container():
-            st.markdown(
-                f"""
-                <div class="coa-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h4 style="margin: 0;">Session <code>{session_id}</code></h4>
-                        {status_pill('awaiting_approval')}
-                    </div>
-                    <p style="font-size: 0.88rem; margin-top: 6px;">
-                        Triggered threshold guardrail or rapid refund anomaly detection.
-                    </p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            st.markdown(f"#### Session `{session_id}`")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown(f"**Submitted by:** {s.get('employee_name') or '_(not recorded)_'}")
+            with col2:
+                st.markdown(f"**Customer:** {s.get('customer_id') or '_(not recorded)_'}")
+            if s.get("last_message"):
+                st.markdown("**Original request:**")
+                st.info(s["last_message"])
+            st.caption("This request exceeded the auto-approval threshold or triggered the rapid-request anomaly check.")
 
-            c1, c2 = st.columns([1, 1], gap="medium")
+            reviewer = st.text_input("Your name (reviewer)", key=f"reviewer_{session_id}")
+            comments = st.text_area("Comments (optional)", key=f"comments_{session_id}")
+            c1, c2 = st.columns(2)
             with c1:
-                reviewer = st.text_input(
-                    "Reviewer Name",
-                    key=f"reviewer_{session_id}",
-                    placeholder="e.g. Sarah Jenkins (Ops)",
-                )
-            with c2:
-                comments = st.text_input(
-                    "Audit Comments (Optional)",
-                    key=f"comments_{session_id}",
-                    placeholder="Reason for approval or denial...",
-                )
-
-            btn_col1, btn_col2, _ = st.columns([1, 1, 2])
-            with btn_col1:
-                if st.button("Approve Request", key=f"approve_{session_id}", use_container_width=True):
+                if st.button("✅ Approve", key=f"approve_{session_id}", use_container_width=True):
                     if not reviewer:
-                        st.error("Please specify a reviewer name prior to approval.")
+                        st.error("Enter your name before deciding.")
                     else:
                         approve_chat(session_id, True, reviewer, comments)
-                        st.success(f"Session {session_id} approved successfully.")
+                        st.success(f"Session {session_id} approved.")
                         st.rerun()
-
-            with btn_col2:
-                if st.button("Reject Request", key=f"reject_{session_id}", use_container_width=True):
+            with c2:
+                if st.button("❌ Reject", key=f"reject_{session_id}", use_container_width=True):
                     if not reviewer:
-                        st.error("Please specify a reviewer name prior to rejection.")
+                        st.error("Enter your name before deciding.")
                     else:
                         approve_chat(session_id, False, reviewer, comments)
                         st.warning(f"Session {session_id} rejected.")
                         st.rerun()
-
             st.divider()

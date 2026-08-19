@@ -106,7 +106,9 @@ class MarketIntelReport(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     session_id: str = Field(description="Groups a multi-turn conversation for checkpointing")
-    customer_id: str = Field(description="Synthetic customer ID this request is on behalf of")
+    employee_name: str = Field(description="The NorthPeak employee using the console for this request")
+    employee_role: str = Field(description="manager | tier1_support | analyst — determines whether this request needs manager approval before being finalized")
+    customer_id: str = Field(description="Which customer's account/order this request is about")
     order_id: str = Field(default="", description="Optional — order ID if the message already references one")
 
 
@@ -116,6 +118,10 @@ class ChatJobStatus(BaseModel):
     current_node: Optional[str] = None
     progress_pct: int = 0
     error: Optional[str] = None
+    employee_name: Optional[str] = None
+    employee_role: Optional[str] = None
+    customer_id: Optional[str] = None
+    last_message: Optional[str] = None
 
 
 class ApprovalDecision(BaseModel):

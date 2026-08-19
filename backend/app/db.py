@@ -88,6 +88,9 @@ CREATE TABLE IF NOT EXISTS chat_jobs (
     progress_pct INTEGER DEFAULT 0,
     error TEXT,
     last_message TEXT,
+    employee_name TEXT,
+    employee_role TEXT,
+    customer_id TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -126,18 +129,35 @@ def get_conn():
 def init_db() -> None:
     with get_conn() as conn:
         conn.executescript(SCHEMA)
+        _migrate_add_missing_columns(conn)
+
+
+def _migrate_add_missing_columns(conn: sqlite3.Connection) -> None:
+    """CREATE TABLE IF NOT EXISTS never alters an existing table, so a
+    commerceops.db created before employee_name/employee_role/customer_id
+    were added to chat_jobs would otherwise break the first time
+    create_job() runs against it. Cheap, additive, safe to run on every
+    startup."""
+    existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(chat_jobs)").fetchall()}
+    for col in ("employee_name", "employee_role", "customer_id"):
+        if col not in existing_cols:
+            conn.execute(f"ALTER TABLE chat_jobs ADD COLUMN {col} TEXT")
 
 
 # --- jobs ---
-def create_job(session_id: str, last_message: str) -> None:
+def create_job(
+    session_id: str, last_message: str, employee_name: str = "",
+    employee_role: str = "", customer_id: str = "",
+) -> None:
     now = datetime.utcnow().isoformat()
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO chat_jobs (session_id, status, last_message, created_at, updated_at) "
-            "VALUES (?, 'queued', ?, ?, ?) "
+            "INSERT INTO chat_jobs (session_id, status, last_message, employee_name, employee_role, customer_id, created_at, updated_at) "
+            "VALUES (?, 'queued', ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT(session_id) DO UPDATE SET status='queued', last_message=excluded.last_message, "
-            "updated_at=excluded.updated_at",
-            (session_id, last_message, now, now),
+            "employee_name=excluded.employee_name, employee_role=excluded.employee_role, "
+            "customer_id=excluded.customer_id, updated_at=excluded.updated_at",
+            (session_id, last_message, employee_name, employee_role, customer_id, now, now),
         )
 
 
@@ -180,32 +200,6 @@ def log_guardrail_event(session_id: Optional[str], rail_type: str, action: str, 
             "VALUES (?, ?, ?, ?, ?)",
             (session_id, rail_type, action, detail, datetime.utcnow().isoformat()),
         )
-    if action in ("blocked", "flagged"):
-        _notify_n8n_guardrail_alert(session_id, rail_type, action, detail)
-
-
-def _notify_n8n_guardrail_alert(session_id, rail_type: str, action: str, detail: str) -> None:
-    """Fires the n8n Guardrail Alert Flow (see n8n/guardrail_alert_flow.json)
-    for anything blocked or flagged — a Slack/webhook notification separate
-    from, and in addition to, the SQLite audit row above. Fails silently:
-    a down or unconfigured n8n instance must never take down the actual
-    guardrail decision it's just reporting on."""
-    from app.config import settings
-    if not settings.N8N_GUARDRAIL_ALERT_WEBHOOK_URL:
-        return
-    try:
-        import requests
-        requests.post(
-            settings.N8N_GUARDRAIL_ALERT_WEBHOOK_URL,
-            json={
-                "session_id": session_id, "rail_type": rail_type,
-                "action": action, "detail": detail,
-                "occurred_at": datetime.utcnow().isoformat(),
-            },
-            timeout=3,
-        )
-    except Exception:
-        pass
 
 
 def list_guardrail_events(limit: int = 100, session_id: Optional[str] = None) -> list[sqlite3.Row]:

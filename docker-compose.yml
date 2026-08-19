@@ -74,7 +74,6 @@ services:
     container_name: commerceops-frontend
     environment:
       - API_BASE_URL=http://backend:8000
-      - GRAFANA_URL=http://localhost:3000/d/commerceops/commerceops-overview
     ports:
       - "8501:8501"
     depends_on:
@@ -107,26 +106,6 @@ services:
     depends_on:
       - prometheus
 
-  n8n:
-    image: n8nio/n8n:latest
-    container_name: commerceops-n8n
-    environment:
-      - N8N_HOST=localhost
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - WEBHOOK_URL=http://localhost:5678/
-      - COMMERCEOPS_API_BASE_URL=http://backend:8000
-      - SLACK_INCOMING_WEBHOOK_URL=${SLACK_INCOMING_WEBHOOK_URL:-}
-      - GENERIC_TIMEZONE=UTC
-    ports:
-      - "5678:5678"
-    volumes:
-      - n8n_data:/home/node/.n8n
-      - ./n8n:/home/node/workflows:ro
-    depends_on:
-      backend:
-        condition: service_healthy
-
   phoenix:
     image: arizephoenix/phoenix:latest
     container_name: commerceops-phoenix
@@ -143,5 +122,4 @@ volumes:
   backend_data:
   prometheus_data:
   grafana_data:
-  n8n_data:
   phoenix_data:

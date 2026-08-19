@@ -1,74 +1,72 @@
 """
 CommerceOps AI — Market Intelligence.
-Autonomous competitive research and pricing synthesis.
+
+Internal tool for on-demand competitive/trend reports, replacing the
+old weekly manual analyst report. Under the hood this is the same Deep
+Agent (plan -> research -> reflect) reachable via the Chat Console.
 """
 import streamlit as st
 
-from api_client import (
-    get_response,
-    get_status,
-    new_session_id,
-    stream_status_events,
-    submit_chat,
-)
+from api_client import get_response, get_status, new_session_id, stream_status_events, submit_chat
 from style import header, inject
 
-st.set_page_config(
-    page_title="Market Intelligence",
-    page_icon="🌐",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+st.set_page_config(page_title="CommerceOps AI | Market Intelligence", page_icon="🌐", layout="wide")
 inject()
-
-# SUB-PAGE HEADER: Clean title without brand prefix
-header(
-    "MARKET INTELLIGENCE",
-    "Competitive research, market trend analysis, and pricing synthesis",
-    is_first_page=False,
-)
+header(" Market Intelligence", "On-demand competitive & trend reports — plan → research → reflect.")
 
 with st.sidebar:
-    st.markdown("### Example Topics")
-    
-    research_prompts = [
-        "Summarize competitor pricing trends in outdoor apparel this quarter.",
-        "How does hiking boot pricing compare across major outdoor brands?",
-    ]
-    
-    for rp in research_prompts:
-        if st.button(rp, key=f"intel_{hash(rp)}", use_container_width=True):
-            st.session_state["intel_input"] = rp
+    st.markdown("### 👤 Active Persona")
+    st.selectbox(
+        "Select Demo Role:",
+        [
+            "Operations Manager (Full Access)",
+            "Tier 1 Support Specialist",
+            "Merchandising Analyst",
+        ],
+        key="user_role",
+    )
+    st.divider()
+    employee_name = st.text_input(
+        "Your name", value=st.session_state.get("coa_employee_name", ""),
+        placeholder="e.g. Priya Shah", key="market_employee_name",
+    )
+    st.session_state["coa_employee_name"] = employee_name
+    st.divider()
+    st.markdown("### Try asking")
+    st.code("Summarize competitor pricing trends in outdoor jackets this quarter.", language="text")
+    st.code("How does our hiking boot pricing compare to competitors?", language="text")
 
-default_intel = st.session_state.pop("intel_input", "")
-query = st.chat_input("Request competitive intelligence or market analysis...")
-active_intel = query or default_intel
+active_role = st.session_state.get("user_role", "Operations Manager (Full Access)")
+if active_role == "Tier 1 Support Specialist":
+    st.warning("⚠️ **Notice**: You are viewing Market Intelligence under a **Tier 1 Support Specialist** persona (Read-Only Mode).")
 
-if active_intel:
-    with st.chat_message("user", avatar="👤"):
-        st.markdown(active_intel)
+st.caption(
+    "Researches against the synthetic competitor dataset shipped with this demo — no live web "
+    "search dependency, so the report is reproducible and doesn't need an external API key."
+)
+
+query = st.chat_input("Ask for a market or competitive research report...")
+
+if query and not employee_name:
+    st.error("Enter your name in the sidebar before submitting a request.")
+elif query:
+    with st.chat_message("user"):
+        st.markdown(query)
 
     session_id = new_session_id()
-    submit_chat(active_intel, session_id, customer_id="STAFF-MARKETING")
+    submit_chat(query, session_id, employee_name, customer_id="STAFF-MARKETING")
 
-    with st.chat_message("assistant", avatar="🌐"):
-        progress_bar = st.progress(0)
-        status_box = st.empty()
-
-        for event in stream_status_events(session_id):
-            pct = min(event.get("progress_pct", 0), 100)
-            progress_bar.progress(pct / 100)
-            status_box.caption(f"Analyzing market data... Node: `{event.get('current_node', 'planning')}`")
-            
-            if event.get("status") in ("completed", "failed", "rejected"):
-                break
-
-        progress_bar.empty()
-        status_box.empty()
+    with st.chat_message("assistant"):
+        with st.spinner("Planning research → gathering findings → reflecting on confidence..."):
+            progress_bar = st.progress(0)
+            for event in stream_status_events(session_id):
+                progress_bar.progress(min(event.get("progress_pct", 0), 100) / 100)
+                if event.get("status") in ("completed", "failed", "rejected"):
+                    break
 
         final = get_status(session_id)
         if final["status"] == "completed":
             resp = get_response(session_id)
-            st.markdown(resp["final_response_text"] if resp else "(No report text generated)")
+            st.markdown(resp["final_response_text"] if resp else "(no response)")
         else:
-            st.error(f"**Research Error:** Status `{final['status']}` — {final.get('error', 'Execution interrupted.')}")
+            st.error(f"Status: {final['status']} — {final.get('error', '')}")

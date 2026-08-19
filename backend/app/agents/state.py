@@ -1,3 +1,9 @@
+"""
+Shared state schema for the CommerceOps AI supervisor graph. One
+TypedDict flows through every node — each node reads only what it needs
+and writes only what it owns, the discipline that keeps an 11-node
+graph debuggable instead of turning into a shared mutable blob.
+"""
 from typing import Optional, TypedDict
 
 
@@ -5,6 +11,8 @@ class SupervisorState(TypedDict, total=False):
     # --- identity & input ---
     session_id: str
     raw_message: str
+    employee_name: str
+    employee_role: str
     customer_id: str
     order_id: str
 

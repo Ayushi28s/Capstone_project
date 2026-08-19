@@ -76,9 +76,6 @@ class Settings:
     PHOENIX_COLLECTOR_ENDPOINT: str = os.environ.get("PHOENIX_COLLECTOR_ENDPOINT", "http://localhost:6006/v1/traces")
     OTEL_EXPORTER_PROMETHEUS_PORT: int = int(os.environ.get("OTEL_EXPORTER_PROMETHEUS_PORT", 9464))
 
-    # --- n8n workflow automation (Module 15) ---
-    N8N_GUARDRAIL_ALERT_WEBHOOK_URL: str = os.environ.get("N8N_GUARDRAIL_ALERT_WEBHOOK_URL", "")
-
     # --- App ---
     APP_ENV: str = os.environ.get("APP_ENV", "development")
     API_HOST: str = os.environ.get("API_HOST", "0.0.0.0")

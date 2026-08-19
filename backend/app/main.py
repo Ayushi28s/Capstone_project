@@ -52,9 +52,13 @@ def health():
 
 @app.post("/chat")
 def submit_chat(req: ChatRequest):
-    create_job(req.session_id, req.message)
+    create_job(
+        req.session_id, req.message, employee_name=req.employee_name,
+        employee_role=req.employee_role, customer_id=req.customer_id,
+    )
     payload = json.dumps({
         "session_id": req.session_id, "message": req.message,
+        "employee_name": req.employee_name, "employee_role": req.employee_role,
         "customer_id": req.customer_id, "order_id": req.order_id,
     })
     _redis.rpush(settings.JOB_QUEUE_KEY, payload)
@@ -69,6 +73,8 @@ def get_status(session_id: str):
     return ChatJobStatus(
         session_id=row["session_id"], status=row["status"], current_node=row["current_node"],
         progress_pct=row["progress_pct"] or 0, error=row["error"],
+        employee_name=row["employee_name"], employee_role=row["employee_role"],
+        customer_id=row["customer_id"], last_message=row["last_message"],
     )
 
 
@@ -117,6 +123,8 @@ def list_sessions():
         ChatJobStatus(
             session_id=row["session_id"], status=row["status"], current_node=row["current_node"],
             progress_pct=row["progress_pct"] or 0, error=row["error"],
+            employee_name=row["employee_name"], employee_role=row["employee_role"],
+            customer_id=row["customer_id"], last_message=row["last_message"],
         )
         for row in list_jobs()
     ]
@@ -155,10 +163,10 @@ def guardrail_events(limit: int = 100, session_id: str | None = None):
 @app.post("/guardrails/test-output-tone", response_model=ToneTestResponse)
 def test_output_tone(req: ToneTestRequest):
     """Exercises the Guardrails AI professional-tone validator directly,
-    in isolation from a full agent run — this is what the Security
-    Red-Team Console's dedicated output-guard test calls, since
-    provoking an LLM into producing genuinely unprofessional text on
-    its own isn't a reliable way to test this specific layer."""
+    in isolation from a full agent run — useful for QA/debugging this
+    specific layer, since provoking an LLM into producing genuinely
+    unprofessional text through a normal request isn't reliable."""
     from app.guardrails.output_guard import check_tone
     fixed_text, flagged = check_tone(req.text, session_id=req.session_id)
     return ToneTestResponse(original_text=req.text, result_text=fixed_text, flagged=flagged)
+

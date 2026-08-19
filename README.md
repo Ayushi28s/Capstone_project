@@ -1,12 +1,13 @@
-# CommerceOps AI — Multi-Agent Retail Operations Platform
+# CommerceOps AI — NorthPeak Retail Employee Console
 
 **Modules 19–20 Capstone · Advanced Certification in Agentic AI Engineering**
 
-A Supervisor Orchestrator, fronted by a lightweight trained intent classifier, routes
-every request to one of five purpose-built agents — a CrewAI Support Triage Crew, a
-RAG+GraphRAG Knowledge Agent, a SQL-backed Merchandising Analytics Agent, and a
-plan→research→reflect Market Intelligence Agent — with a three-layer guardrail stack,
-a genuine human-approval gate, and full observability wrapped around all of it.
+An internal tool for NorthPeak Retail's support, merchandising, and operations staff. An
+employee looks up an order, processes a refund, checks a policy, or asks an internal
+analytics/market-research question — one Chat Console, routed automatically by a Supervisor
+Orchestrator to one of five purpose-built agents, with a three-layer guardrail stack and a
+genuine human-approval gate underneath all of it. This is not a customer-facing bot; every
+action is logged against the employee who performed it.
 
 ## Why this exists
 
@@ -44,6 +45,13 @@ docker compose up --build
 docker compose exec backend python scripts/seed_db.py
 ```
 
+Optional — populate the Approval Queue with a few realistic pending items (needs a working
+API key, since it submits real requests through the live pipeline):
+
+```bash
+docker compose exec backend python scripts/seed_demo_approvals.py
+```
+
 Full step-by-step instructions, a UI walkthrough, and troubleshooting: see
 **CommerceOps_AI_Solution_Guide.docx**.
 
@@ -57,11 +65,10 @@ Full step-by-step instructions, a UI walkthrough, and troubleshooting: see
 | Support Triage Crew | CrewAI, hierarchical process | Module 13 |
 | Knowledge Agent | Vector RAG + GraphRAG (NetworkX) | Modules 4–5, 14 |
 | Merchandising Analytics Agent | SQLDatabaseToolkit SQL agent | Module 6 |
-| Market Intelligence Agent | Hand-built plan→execute→reflect sub-graph | Module 12 |
+| Market Intelligence Agent | Hand-built plan→execute→reflect sub-graph, with episodic memory | Module 12 |
 | MCP servers | 3 custom + `mcp-server-sqlite` + `github-mcp-server` | Modules 10–11 |
 | Guardrails | NeMo Guardrails, Presidio, Guardrails AI | Module 16 |
-| Workflow automation | n8n (guardrail alert + scheduled report trigger) | Module 15 |
-| Observability | LangSmith, OpenTelemetry, Prometheus/Grafana, Arize Phoenix (own container), RAGAS | Modules 9, 14, 17 |
+| Observability | LangSmith, OpenTelemetry, Prometheus/Grafana, Arize Phoenix, RAGAS — all terminal/backend-only | Modules 9, 14, 17 |
 | Deployment | Docker, Docker Compose, GitHub Actions, GCP Cloud Run | Module 18 |
 
 ## Repository layout
@@ -69,46 +76,73 @@ Full step-by-step instructions, a UI walkthrough, and troubleshooting: see
 ```
 commerceops-ai/
 ├── backend/            FastAPI + Supervisor graph + 5 agents + guardrails + MCP
-├── frontend/            Streamlit console — 6 pages incl. live Security Red-Team Console
+├── frontend/            Streamlit console — 6 pages
 ├── monitoring/          Prometheus + Grafana provisioning
-├── docker-compose.yml   Full 6-service stack
+├── docker-compose.yml   Full service stack
 └── .github/workflows/   CI/CD, gated on RAGAS + guardrail regression
 ```
 
-## Live security demo
+## The console's pages
 
-Open the **Security Red-Team Console** page and run the 8-prompt adversarial suite
-live against the real pipeline — including the wholesale-cost-leak prompt that is the
-direct proof this project fixes the incident that started it.
+- **Dashboard** — session KPIs and recent activity, by employee and customer.
+- **Chat Console** — the primary tool. Enter your name, pick which customer's account
+  you're working on, and type the request — order status, refunds, billing, policy
+  questions, analytics, or market research all route automatically.
+- **Approval Queue** — refunds ≥ $250 and flagged anomaly patterns pause here, showing who
+  submitted the request, for which customer, and the original message — until a manager
+  approves or rejects it.
+- **Merchandising Analytics** / **Market Intelligence** — direct access to those two agents
+  for staff who don't need the full Chat Console flow.
 
-## n8n workflow automation
+There is no Observability or Policy Documents page — see the sections below for the
+terminal-based equivalents of both.
 
-Two workflows ship in `n8n/`, both real, importable n8n exports:
+## Employee identity
 
-- `guardrail_alert_flow.json` — triggered by a webhook the backend calls on every
-  `blocked`/`flagged` guardrail event (see `app/db.py`'s `log_guardrail_event`), posts to
-  Slack via an incoming webhook.
-- `scheduled_market_intel_flow.json` — fires every Monday, calls the Market Intelligence
-  Agent, and posts the resulting report to Slack once it's ready.
+Every request requires an employee name, stored alongside the customer ID it's about —
+`chat_jobs.employee_name` / `chat_jobs.customer_id` in `app/db.py`. This is a distinct field
+from any dropdown-selected customer; the console is answering "which NorthPeak employee is
+handling which customer's issue," not asking a customer to identify themselves. There's no
+separate login system in this demo — the name field is the only identity check — so treat it
+as an audit-trail field, not an access-control boundary.
 
-`docker compose up` starts n8n at http://localhost:5678 automatically. To wire the flows in:
+## Observability — terminal-only, no UI
+
+There is no Observability page in this app; all four tools are checked from a terminal.
 
 ```bash
-# 1. Open http://localhost:5678, import both files from n8n/ via the UI (Import from File)
-# 2. Open the Guardrail Event Webhook node, copy its Production URL, then:
-echo "N8N_GUARDRAIL_ALERT_WEBHOOK_URL=<paste the URL>" >> backend/.env
-docker compose restart backend
-# 3. (Optional) set SLACK_INCOMING_WEBHOOK_URL in the project-root .env for real Slack posts
-# 4. Activate both workflows in the n8n UI
+cd backend
+python scripts/observability_report.py            # one-shot report
+python scripts/observability_report.py --events 50 --watch 10   # live-refreshing tail
 ```
 
-## Arize Phoenix (opt-in drift monitoring)
+This single script covers all four:
+- **Guardrail events** — read directly from SQLite, printed as a table with an action
+  breakdown.
+- **Prometheus metrics** — fetched live from the backend's own `/metrics` endpoint over
+  plain HTTP and printed to the terminal; no browser or separate `curl` needed.
+- **LangSmith** — config status only (enabled/disabled, project name, dashboard URL to
+  open manually). It's a hosted SaaS with its own web UI; this script doesn't replace that,
+  it just tells you whether tracing is even switched on. Enable via `LANGSMITH_API_KEY` +
+  `LANGCHAIN_TRACING_V2=true` in `backend/.env`.
+- **Arize Phoenix** — same idea: config status and its OTLP endpoint, not a replacement for
+  opening Phoenix's own UI. Enable via `PHOENIX_ENABLED=true` (needs the `phoenix` Docker
+  service running: `docker compose up phoenix -d`). Traces go out via the lightweight
+  `arize-phoenix-otel` package, never the full embedded `arize-phoenix` platform — that
+  package has a hard, broken dependency on Windows, found and fixed during this build.
 
-Phoenix runs as its own Docker service (`arizephoenix/phoenix`, official image), the same
-pattern as Grafana — the backend only ever sends it OTLP traces via the lightweight
-`arize-phoenix-otel` package, never embeds the full Phoenix platform in-process. This
-matters on Windows specifically: the full `arize-phoenix` package hard-depends on
-`sqlean-py`, which has no Windows wheels at all and fails to build without the MSVC C++
-Build Tools installed. `docker compose up` starts Phoenix automatically at
-http://localhost:6006; set `PHOENIX_ENABLED=true` in `backend/.env` to have the backend
-actually send it traces.
+**Grafana** is the one exception that genuinely needs a browser (it's a dashboard tool by
+definition) — `http://localhost:3000`, login `admin` / `commerceops`. It's visualizing the
+exact same Prometheus metrics the script above already prints in plain text, so the browser
+step is optional, not required to see the numbers.
+
+## Policy documents
+
+Thirteen Markdown documents live in `backend/data/policy_docs/` — the Knowledge Agent's RAG
+corpus. There's no editing UI; add or edit a `.md` file directly, then re-run the index:
+
+```bash
+cd backend
+python scripts/seed_db.py
+```
+

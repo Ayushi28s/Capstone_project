@@ -22,12 +22,16 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s worker %(levelname)s
 logger = logging.getLogger("commerceops.worker")
 
 
-def process_job(session_id: str, message: str, customer_id: str, order_id: str) -> None:
+def process_job(
+    session_id: str, message: str, employee_name: str, employee_role: str,
+    customer_id: str, order_id: str,
+) -> None:
     graph = get_graph()
     config = {"configurable": {"thread_id": session_id}}
 
     initial_state = {
         "session_id": session_id, "raw_message": message,
+        "employee_name": employee_name, "employee_role": employee_role,
         "customer_id": customer_id, "order_id": order_id,
     }
     update_job(session_id, status="running")
@@ -84,7 +88,10 @@ def main() -> None:
             logger.warning("Unknown job %s in queue, skipping.", session_id)
             continue
         logger.info("Picked up session %s", session_id)
-        process_job(session_id, payload["message"], payload["customer_id"], payload.get("order_id", ""))
+        process_job(
+            session_id, payload["message"], payload.get("employee_name", ""),
+            payload.get("employee_role", ""), payload["customer_id"], payload.get("order_id", ""),
+        )
 
 
 if __name__ == "__main__":

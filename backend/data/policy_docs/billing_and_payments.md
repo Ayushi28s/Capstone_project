@@ -24,6 +24,5 @@ Any customer reporting a recurring or subscription-style charge should be flagge
 fraud case, not treated as a standard billing dispute.
 
 ## Price-match and promotional adjustments
-Price-match requests are honored within 7 days of purchase if the identical SKU is found at a
-lower price on a NorthPeak-recognized competitor site, capped at a 20% adjustment. Promotional
-codes cannot be applied retroactively to already-placed orders.
+See the Price Match & Promotions Policy for full eligibility, the adjustment cap, and the
+required evidence — this section isn't a second source of truth for those specifics.

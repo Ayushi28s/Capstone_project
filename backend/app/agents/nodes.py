@@ -158,7 +158,22 @@ def assemble_response_node(state: SupervisorState) -> dict:
     # (merchandising) ever sets is_internal_context, and its own system
     # prompt already scopes what it's allowed to report.
 
-    return {**_progress("assemble_response", 85), "final_response_text": screened}
+    # Role-based approval gate: applies uniformly across all five agent
+    # paths, independent of whatever the Support Crew's own refund-
+    # threshold/anomaly logic already decided. A Manager's own requests
+    # are never gated here; anyone else's request needs a Manager's
+    # sign-off before it's considered final — deliberately fail-safe:
+    # an empty or unrecognized role is treated as NOT a manager, not
+    # assumed to be one.
+    already_requires_approval = state.get("requires_human_approval", False)
+    role = (state.get("employee_role") or "").strip().lower()
+    role_requires_approval = role != "manager"
+
+    return {
+        **_progress("assemble_response", 85),
+        "final_response_text": screened,
+        "requires_human_approval": already_requires_approval or role_requires_approval,
+    }
 
 
 # ---------------------------------------------------------------------

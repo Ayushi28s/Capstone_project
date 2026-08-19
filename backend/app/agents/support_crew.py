@@ -168,10 +168,14 @@ def _build_crew() -> Crew:
 
     triage_task = Task(
         description=(
-            "A customer support message is provided in the task input. Determine which "
-            "specialist(s) this actually needs — it may blend order-status, refund, and "
-            "billing concerns in one message. Delegate to the right specialist(s) and "
-            "synthesize their results. Message: {message}\n"
+            "A NorthPeak employee typed the message below into an internal tool, describing "
+            "what a customer needs or asking about a specific order/customer by ID — the "
+            "employee is NOT the customer. Determine which specialist(s) this actually "
+            "needs — it may blend order-status, refund, and billing concerns in one message. "
+            "Delegate to the right specialist(s) and synthesize their results. Write the "
+            "summary for the EMPLOYEE to read as a case note (\"order NP-88213 for customer "
+            "CUST-001 is shipped, arriving...\"), never as a first-person reply to the "
+            "customer (\"your order has shipped\"). Message: {message}\n"
             "Customer ID: {customer_id}\nOrder ID (if known): {order_id}\n\n"
             "IMPORTANT: result_type must be exactly one of 'order_status', 'refund', or "
             "'billing_dispute'. requires_human_approval and anomaly_flagged must be False "
