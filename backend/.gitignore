@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+.env
+data/*.db
+data/*.db-journal
+data/chroma/
+data/knowledge_graph.json
+data/intent_router.joblib
+*.log
+.pytest_cache/

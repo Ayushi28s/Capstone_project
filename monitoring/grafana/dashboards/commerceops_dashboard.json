@@ -1,0 +1,76 @@
+{
+  "title": "CommerceOps AI Overview",
+  "uid": "commerceops",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Node Latency (p95, seconds)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(commerceops_node_latency_seconds_bucket[5m])) by (le, node))",
+          "legendFormat": "{{node}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Requests (rate, by status)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "sum(rate(commerceops_requests_total[15m])) by (status)", "legendFormat": "{{status}}" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Intent Distribution",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "sum(commerceops_intent_total) by (intent)", "legendFormat": "{{intent}}" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Guardrail Events (rate, by rail type and action)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(commerceops_guardrail_events_total[15m])) by (rail_type, action)",
+          "legendFormat": "{{rail_type}} / {{action}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "HITL Decisions",
+      "type": "piechart",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "sum(commerceops_hitl_decisions_total) by (approved)", "legendFormat": "approved={{approved}}" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Estimated Token Cost (USD, cumulative)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 16 },
+      "targets": [{ "expr": "commerceops_estimated_token_cost_usd_total" }]
+    },
+    {
+      "id": 7,
+      "title": "Total Requests Failed",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 16 },
+      "targets": [{ "expr": "sum(commerceops_requests_total{status=\"failed\"})" }]
+    }
+  ]
+}

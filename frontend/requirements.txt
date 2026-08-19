@@ -1,0 +1,6 @@
+streamlit>=1.39,<1.62
+requests>=2.32,<3.0
+pandas>=2.2,<3.0
+plotly>=5.24,<7.0
+python-dotenv>=1.2.2,<2
+sseclient-py>=1.8,<1.9

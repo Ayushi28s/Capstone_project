@@ -1,0 +1,20 @@
+[theme]
+# Primary accent matching dark slate taupe interactive elements
+primaryColor = "#4A4543"
+
+# Main canvas background (Warm Alabaster)
+backgroundColor = "#FDFBF7"
+
+# Secondary surface background for sidebar & inputs (Warm Beige/Off-white)
+secondaryBackgroundColor = "#F7F3EE"
+
+# Main body text color (Dark Charcoal instead of harsh navy)
+textColor = "#333130"
+
+# Clean sans-serif typography
+font = "sans serif"
+base = "light"
+
+[client]
+showErrorDetails = false
+toolbarMode = "minimal"
