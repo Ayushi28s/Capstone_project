@@ -8,7 +8,7 @@ framed for staff self-serve analytics instead of customer support.
 import streamlit as st
 
 from api_client import get_response, get_status, new_session_id, stream_status_events, submit_chat
-from style import get_identity, header, inject
+from style import get_identity, header, inject, safe_markdown
 
 st.set_page_config(page_title="CommerceOps AI | Merchandising Analytics", page_icon="📊", layout="wide")
 inject()
@@ -46,12 +46,17 @@ if question:
         progress_bar = st.progress(0)
         for event in stream_status_events(session_id):
             progress_bar.progress(min(event.get("progress_pct", 0), 100) / 100)
-            if event.get("status") in ("completed", "failed", "rejected"):
+            if event.get("status") in ("completed", "failed", "rejected", "awaiting_approval"):
                 break
 
         final = get_status(session_id)
         if final["status"] == "completed":
             resp = get_response(session_id)
-            st.markdown(resp["final_response_text"] if resp else "(no response)")
+            safe_markdown(resp["final_response_text"] if resp else "(no response)")
+        elif final["status"] == "awaiting_approval":
+            st.warning(
+                "⚠️ This request needs a Manager's sign-off before it's finalized — routed to "
+                "the **Approval Queue**. It will resume automatically once decided."
+            )
         else:
-            st.error(f"Status: {final['status']} — {final.get('error', '')}")
+            st.error(f"Status: {final['status']}" + (f" — {final['error']}" if final.get("error") else ""))

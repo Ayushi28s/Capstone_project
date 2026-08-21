@@ -158,22 +158,20 @@ def assemble_response_node(state: SupervisorState) -> dict:
     # (merchandising) ever sets is_internal_context, and its own system
     # prompt already scopes what it's allowed to report.
 
-    # Role-based approval gate: applies uniformly across all five agent
-    # paths, independent of whatever the Support Crew's own refund-
-    # threshold/anomaly logic already decided. A Manager's own requests
-    # are never gated here; anyone else's request needs a Manager's
-    # sign-off before it's considered final — deliberately fail-safe:
-    # an empty or unrecognized role is treated as NOT a manager, not
-    # assumed to be one.
-    already_requires_approval = state.get("requires_human_approval", False)
-    role = (state.get("employee_role") or "").strip().lower()
-    role_requires_approval = role != "manager"
-
-    return {
-        **_progress("assemble_response", 85),
-        "final_response_text": screened,
-        "requires_human_approval": already_requires_approval or role_requires_approval,
-    }
+    # requires_human_approval is deliberately left untouched here — it
+    # stays exactly whatever the originating agent already set (only
+    # the Refund Specialist's tool sets it True, for a genuine $250+ or
+    # anomaly-flagged refund). An earlier version of this node also
+    # forced approval for any non-Manager's request regardless of what
+    # was actually being asked — that blocked ordinary informational
+    # questions (order status, a policy lookup, market trends, a sales
+    # summary) behind the same gate as an actual refund, for every
+    # role, which is the wrong bar: approval should track the
+    # CONSEQUENCE of the action, not who happens to be asking. An
+    # employee of any role can get a direct answer to a question that
+    # doesn't move money or take an action; only the action itself
+    # (currently: a qualifying refund) needs sign-off.
+    return {**_progress("assemble_response", 85), "final_response_text": screened}
 
 
 # ---------------------------------------------------------------------

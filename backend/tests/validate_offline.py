@@ -8,17 +8,19 @@ download.
 
 Exercises four scenarios in one run:
   1. A Manager's order-status request — completes with no approval
-     needed (proves the role gate correctly does NOT fire for managers).
+     needed.
   2. A Manager's refund request over $250 — pauses at the HITL gate
      purely on the refund-threshold logic, then resumes correctly after
-     a simulated approval (kept isolated from the role gate by using a
-     manager here, so this scenario tests the threshold trigger alone).
-  3. A Tier 1 Support employee's ordinary order-status request — NOW
-     requires approval purely because of role, even though nothing
-     about the request itself (amount, anomaly) would have triggered
-     it. This is the new role-based gate added when the approval queue
-     was reframed from "refund threshold only" to "anyone who isn't a
-     manager needs sign-off."
+     a simulated approval.
+  3. A Tier 1 Support employee's ordinary order-status request — ALSO
+     completes with no approval needed. Approval tracks the
+     CONSEQUENCE of an action (currently: a qualifying refund), not who
+     is asking — an earlier version of this project gated every
+     non-Manager request regardless of content, which blocked ordinary
+     informational questions behind the same review as an actual
+     refund. This scenario is the regression test proving that's fixed:
+     a Tier 1 employee gets a direct answer to a simple lookup, the
+     same way a Manager would.
   4. A rejected input — the input guard routes straight to END.
 
     python tests/validate_offline.py
@@ -80,6 +82,13 @@ def run_scenario_manager_order_status():
         assert final_state["intent"] == "order_status"
         assert final_state["requires_human_approval"] is False
         assert "shipped" in final_state["final_response_text"]
+        snapshot = graph.get_state(config)
+        assert not snapshot.next, (
+            "The graph should have run straight through to finalize/END with no pause at all — "
+            "checking the requires_human_approval VALUE alone isn't sufficient here, since an "
+            "earlier bug had the graph pausing unconditionally regardless of that value; this "
+            "explicit snapshot.next check is what actually catches that."
+        )
         print("  PASSED: a Manager's simple lookup completes with no approval gate.")
 
 
@@ -121,8 +130,8 @@ def run_scenario_manager_refund_hitl():
         print("  PASSED: refund correctly paused for HITL and resumed with the reviewer's decision.")
 
 
-def run_scenario_tier1_order_status_requires_approval():
-    print("\n=== Scenario 3: Tier 1 Support, order status (role-triggered HITL, NEW) ===")
+def run_scenario_tier1_order_status_no_approval():
+    print("\n=== Scenario 3: Tier 1 Support, order status (informational — NO approval needed) ===")
     from app.agents.graph import build_graph
     from app.schemas import IntentClassification
 
@@ -139,22 +148,26 @@ def run_scenario_tier1_order_status_requires_approval():
 
         graph = build_graph()
         config = {"configurable": {"thread_id": "offline-tier1-order-status"}}
+        final_state = None
         for state in graph.stream(
             {"session_id": "offline-tier1-order-status", "raw_message": "Where's my order NP-88213?",
              "employee_name": "Test Tier1", "employee_role": "tier1_support",
              "customer_id": "CUST-001", "order_id": "NP-88213"},
             config, stream_mode="values",
         ):
+            final_state = state
             print(f"  [{state.get('progress_pct', 0):3d}%] {state.get('current_node')}")
 
         snapshot = graph.get_state(config)
-        assert snapshot.next, (
-            "Expected the graph to be paused before human_approval_gate — the Support Crew's own "
-            "logic set requires_human_approval=False for this order-status result, so this pause "
-            "can ONLY be explained by the role-based gate correctly overriding that."
+        assert not snapshot.next, (
+            "A Tier 1 Support employee's ordinary informational lookup should NOT pause for "
+            "approval — role alone no longer gates anything; only an actual consequential "
+            "action (currently: a qualifying refund) does, regardless of who's asking."
         )
-        print("  PASSED: a Tier 1 Support employee's ordinary lookup is gated by role alone —")
-        print("          nothing about the request itself (amount, anomaly) would have triggered it.")
+        assert final_state["requires_human_approval"] is False
+        assert "shipped" in final_state["final_response_text"]
+        print("  PASSED: an ordinary informational question from a non-Manager completes with")
+        print("          no approval gate — approval tracks the action, not the role.")
 
 
 def run_scenario_rejected_input():
@@ -182,7 +195,7 @@ def run_scenario_rejected_input():
 if __name__ == "__main__":
     run_scenario_manager_order_status()
     run_scenario_manager_refund_hitl()
-    run_scenario_tier1_order_status_requires_approval()
+    run_scenario_tier1_order_status_no_approval()
     run_scenario_rejected_input()
     print("\nOffline validation PASSED — Supervisor graph wiring is correct across all four scenarios,")
     print("including the new role-based approval gate.")

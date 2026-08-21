@@ -198,3 +198,15 @@ def get_identity() -> tuple[str, str, str]:
     role_label = st.session_state.get("user_role") or ""
     role = ROLE_LABEL_TO_VALUE.get(role_label, "")
     return name, role, role_label
+
+
+def safe_markdown(text: str) -> None:
+    """Renders agent-generated text via st.markdown() with dollar signs
+    escaped first. Streamlit's markdown renderer treats anything
+    between two "$" as inline LaTeX — this project's agents constantly
+    produce real dollar amounts (refund totals, prices, revenue
+    figures), so unescaped text with two or more "$" in it gets
+    silently mangled into a garbled italic math expression instead of
+    showing the actual numbers. Escaping "$" to "\\$" displays it as a
+    literal dollar sign and disables the math interpretation."""
+    st.markdown(text.replace("$", "\\$"))

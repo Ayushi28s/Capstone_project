@@ -10,7 +10,7 @@ never picks which agent handles it, they just describe what they need.
 import streamlit as st
 
 from api_client import get_response, get_status, new_session_id, stream_status_events, submit_chat
-from style import get_identity, header, inject, status_pill
+from style import get_identity, header, inject, safe_markdown, status_pill
 
 st.set_page_config(page_title="CommerceOps AI | Chat Console", page_icon="💬", layout="wide")
 inject()
@@ -111,7 +111,7 @@ if message:
             resp = get_response(session_id)
             answer = resp["final_response_text"] if resp else "(no response text)"
             st.markdown("---")
-            st.markdown(answer)
+            safe_markdown(answer)
             st.session_state.coa_chat_history.append({"role": "assistant", "content": answer})
         elif final["status"] == "rejected":
             st.error(f"Request blocked: {final.get('error', 'guardrail rejection')}")
