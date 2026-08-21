@@ -10,12 +10,12 @@ never picks which agent handles it, they just describe what they need.
 import streamlit as st
 
 from api_client import get_response, get_status, new_session_id, stream_status_events, submit_chat
-from style import header, inject, status_pill
+from style import get_identity, header, inject, status_pill
 
 st.set_page_config(page_title="CommerceOps AI | Chat Console", page_icon="💬", layout="wide")
 inject()
 header(
-    " Chat Console — NorthPeak Employee Tool",
+    "💬 Chat Console — NorthPeak Employee Tool",
     "For support, merchandising, and operations staff. Look up an order, process a refund, "
     "check a policy, or ask an internal question — the Supervisor routes it automatically.",
 )
@@ -40,24 +40,13 @@ CUSTOMERS = {
 }
 
 with st.sidebar:
-    st.markdown("### 👤 Active Persona")
-    st.selectbox(
-        "Select Demo Role:",
-        [
-            "Operations Manager (Full Access)",
-            "Tier 1 Support Specialist",
-            "Merchandising Analyst",
-        ],
-        key="user_role",
-    )
-    st.divider()
-
-    st.markdown("### You're signed in as")
-    employee_name = st.text_input(
-        "Your name", value=st.session_state.get("coa_employee_name", ""),
-        placeholder="e.g. Priya Shah", key="employee_name_input",
-    )
-    st.session_state["coa_employee_name"] = employee_name
+    employee_name, employee_role, role_label = get_identity()
+    if not employee_name or not role_label:
+        st.warning("Set your name and role on the main Portal page first.")
+        if st.button("← Go to Portal"):
+            st.switch_page("app.py")
+        st.stop()
+    st.markdown(f"### Signed in as\n**{employee_name}**  ·  {role_label}")
     st.divider()
     st.markdown("### Looking up")
     customer_id = st.selectbox(
@@ -82,15 +71,13 @@ for turn in st.session_state.coa_chat_history:
 
 message = st.chat_input("Ask about an order, refund, billing, policy, analytics, or market trends...")
 
-if message and not employee_name:
-    st.error("Enter your name in the sidebar before submitting a request — every action here is logged against an employee.")
-elif message:
+if message:
     st.session_state.coa_chat_history.append({"role": "user", "content": message})
     with st.chat_message("user"):
         st.markdown(message)
 
     session_id = new_session_id()
-    submit_chat(message, session_id, employee_name, customer_id, order_id)
+    submit_chat(message, session_id, employee_name, employee_role, customer_id, order_id)
 
     with st.chat_message("assistant"):
         progress_bar = st.progress(0)
@@ -141,4 +128,4 @@ elif message:
     st.session_state["last_session_id"] = session_id
 
 if "last_session_id" in st.session_state:
-    st.caption(f"Last session ID: `{st.session_state['last_session_id']}`  ·  Logged under: `{employee_name or '—'}`")
+    st.caption(f"Last session ID: `{st.session_state['last_session_id']}`  ·  Logged under: `{employee_name}` ({employee_role})")

@@ -11,31 +11,27 @@ restart, not just a log line.
 import streamlit as st
 
 from api_client import approve_chat, list_sessions
-from style import header, inject
+from style import get_identity, header, inject
 
 st.set_page_config(page_title="CommerceOps AI | Approval Queue", page_icon="✅", layout="wide")
 inject()
+header("✅ Human Approval Queue", "Refunds ≥ $250 and flagged anomalies pause here until a manager decides.")
 
 with st.sidebar:
-    st.markdown("### 👤 Active Persona")
-    st.selectbox(
-        "Select Demo Role:",
-        [
-            "Operations Manager (Full Access)",
-            "Tier 1 Support Specialist",
-            "Merchandising Analyst",
-        ],
-        key="user_role",
+    employee_name, employee_role, role_label = get_identity()
+    if not employee_name or not role_label:
+        st.warning("Set your name and role on the main Portal page first.")
+        if st.button("← Go to Portal"):
+            st.switch_page("app.py")
+        st.stop()
+    st.markdown(f"### Signed in as\n**{employee_name}**  ·  {role_label}")
+
+if employee_role != "manager":
+    st.error(
+        "🔒 The Approval Queue is Manager-only. Tier 1 Support and Analyst roles submit "
+        "requests for review here but can't access this page themselves — switch to "
+        "**Operations Manager (Full Access)** on the main Portal page to continue."
     )
-    st.divider()
-
-active_role = st.session_state.get("user_role", "Operations Manager (Full Access)")
-
-header(" Human Approval Queue", "Refunds ≥ $250 and flagged anomalies pause here until a manager decides.")
-
-# Role-Based Access Control Gate: ONLY Operations Manager is allowed
-if active_role != "Operations Manager (Full Access)":
-    st.error(f"🔒 **Access Restricted**: `{active_role}` does not have manager approval privileges.")
     st.stop()
 
 sessions = list_sessions()

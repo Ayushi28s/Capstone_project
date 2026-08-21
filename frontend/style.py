@@ -29,7 +29,6 @@ def inject() -> None:
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
-        /* Global Page Background */
         html, body, [data-testid="stAppViewContainer"], .main {{
             background-color: {BG_CANVAS} !important;
             color: {TEXT_MAIN} !important;
@@ -41,7 +40,6 @@ def inject() -> None:
             backdrop-filter: blur(8px);
         }}
 
-        /* Sidebar Minimalist Design */
         [data-testid="stSidebar"] {{
             background-color: #F7F3EE !important;
             border-right: 1px solid #EBE5DF !important;
@@ -50,7 +48,6 @@ def inject() -> None:
             color: {TEXT_MAIN} !important;
         }}
 
-        /* Hero / Header Section Styled Like "ASSEMBLE" Banner */
         .assemble-hero {{
             background: linear-gradient(180deg, {BG_HERO} 0%, #E3D5CD 100%);
             border-radius: 16px;
@@ -75,7 +72,6 @@ def inject() -> None:
             margin: 0 !important;
         }}
 
-        /* Clean Card Layouts */
         .coa-card {{
             background: {BG_SURFACE};
             border: 1px solid #EBE5DF;
@@ -93,7 +89,6 @@ def inject() -> None:
             color: {TEXT_MUTED} !important;
         }}
 
-        /* Chat Messages Container */
         [data-testid="stChatMessage"] {{
             background-color: {BG_SURFACE} !important;
             border: 1px solid #EBE5DF !important;
@@ -103,7 +98,6 @@ def inject() -> None:
             box-shadow: 0 2px 6px rgba(0,0,0,0.015) !important;
         }}
 
-        /* Bottom Fixed Chat Bar */
         [data-testid="stBottom"], [data-testid="stBottom"] > div {{
             background-color: {BG_CANVAS} !important;
         }}
@@ -117,7 +111,6 @@ def inject() -> None:
             border-color: {ACCENT_DARK} !important;
         }}
 
-        /* Minimalist Buttons */
         div.stButton > button {{
             background-color: {BG_SURFACE} !important;
             color: {TEXT_MAIN} !important;
@@ -176,3 +169,32 @@ def status_pill(status: str) -> str:
     color = STATUS_COLORS.get(status, TEXT_MUTED)
     formatted = status.replace("_", " ").title()
     return f'<span style="background:{color}18; color:{color}; border:1px solid {color}30; padding:3px 10px; border-radius:4px; font-size:0.75rem; font-weight:500; letter-spacing:0.03em;">● {formatted}</span>'
+
+
+# --- Shared identity, read-only ---
+# Role/name selection happens ONCE, in app.py's onboarding @st.dialog
+# modal, which sets st.session_state["user_role"] (the raw display
+# label, e.g. "Tier 1 Support Specialist") and
+# st.session_state["coa_employee_name"]. Every other page should READ
+# that shared state, never render its own separate role selector — a
+# second selectbox with its own key is a second, disconnected identity
+# system, which was the actual bug: the sub-pages had one, the modal
+# had another, and they never talked to each other.
+ROLE_LABEL_TO_VALUE = {
+    "Operations Manager (Full Access)": "manager",
+    "Tier 1 Support Specialist": "tier1_support",
+    "Merchandising Analyst": "analyst",
+}
+
+
+def get_identity() -> tuple[str, str, str]:
+    """Returns (employee_name, employee_role, role_label) from the
+    shared session state the onboarding modal already set.
+    employee_role is the normalized value the backend checks against
+    (app/agents/nodes.py only exempts the literal word "manager");
+    role_label is the raw display string from the modal, if a page
+    wants to show it as-is."""
+    name = st.session_state.get("coa_employee_name") or ""
+    role_label = st.session_state.get("user_role") or ""
+    role = ROLE_LABEL_TO_VALUE.get(role_label, "")
+    return name, role, role_label

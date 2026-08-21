@@ -25,12 +25,15 @@ def health() -> dict:
     return resp.json()
 
 
-def submit_chat(message: str, session_id: str, employee_name: str, customer_id: str, order_id: str = "") -> dict:
+def submit_chat(
+    message: str, session_id: str, employee_name: str, employee_role: str,
+    customer_id: str, order_id: str = "",
+) -> dict:
     resp = requests.post(
         f"{API_BASE_URL}/chat",
         json={
             "message": message, "session_id": session_id, "employee_name": employee_name,
-            "customer_id": customer_id, "order_id": order_id,
+            "employee_role": employee_role, "customer_id": customer_id, "order_id": order_id,
         },
         timeout=15,
     )
