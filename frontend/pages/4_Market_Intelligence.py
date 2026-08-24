@@ -12,12 +12,8 @@ from style import get_identity, header, inject, safe_markdown
 
 st.set_page_config(page_title="CommerceOps AI | Market Intelligence", page_icon="🌐", layout="wide")
 inject()
-header("🌐 Market Intelligence", "On-demand competitive & trend reports — plan → research → reflect.")
+header("Market Intelligence", "On-demand competitive & trend reports — plan → research → reflect.")
 
-st.caption(
-    "Researches against the synthetic competitor dataset shipped with this demo — no live web "
-    "search dependency, so the report is reproducible and doesn't need an external API key."
-)
 
 with st.sidebar:
     employee_name, employee_role, role_label = get_identity()

@@ -5,15 +5,19 @@ not a custom reimplementation. This is the second of the two "ecosystem
 server" integrations the curriculum asks for (the first is the GitHub
 MCP server in github_client.py).
 
+Uses ONE persistent subprocess + MCP session for the whole worker
+process's lifetime — see _persistent_session.py's module docstring for
+the full reasoning. Not currently wired into any agent (Merchandising
+Analytics uses SQLDatabaseToolkit directly, a synchronous LangChain
+tool, not this client) — fixed to the same pattern anyway so a future
+feature wiring this in doesn't silently inherit the per-call subprocess
+spawn/teardown bug.
+
 Unlike the custom Order DB / Catalog servers, this server has NO
 built-in field-level scoping — read_query runs any SELECT statement
 against the whole database, including products.wholesale_cost_usd.
-That's fine here specifically because this client is wired into exactly
-one place in the whole system: the Merchandising Analytics Agent
-(app/agents/merchandising_agent.py), which is an internal-only agent
-never exposed to customer-facing flows. See the Solution Guide's
-Guardrails phase for the full read-only-vs-read-write and
-customer-facing-vs-internal scoping rationale.
+That's fine here specifically because this client would only ever be
+wired to an internal-only agent, never a customer-facing flow.
 
 Launch the real server standalone for debugging:
     mcp-server-sqlite --db-path ./data/commerceops.db
@@ -22,10 +26,12 @@ import json
 import os
 import sys
 
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+from mcp import StdioServerParameters
 
 from app.config import settings
+from app.mcp_tools._persistent_session import PersistentMCPConnection
+
+_connection: PersistentMCPConnection | None = None
 
 
 def _console_script_path() -> str:
@@ -42,33 +48,30 @@ def _console_script_path() -> str:
     return full_path if os.path.exists(full_path) else "mcp-server-sqlite"  # fall back to PATH lookup
 
 
-def _server_params() -> StdioServerParameters:
-    return StdioServerParameters(
-        command=_console_script_path(), args=["--db-path", settings.MCP_SQLITE_DB_PATH]
-    )
+def _get_connection() -> PersistentMCPConnection:
+    global _connection
+    if _connection is None:
+        params = StdioServerParameters(
+            command=_console_script_path(), args=["--db-path", settings.MCP_SQLITE_DB_PATH]
+        )
+        _connection = PersistentMCPConnection(params)
+    return _connection
 
 
 async def read_query(sql: str) -> list[dict]:
     """Run a SELECT-only query against the full database, including
-    internal cost/margin fields. Only ever called from the internal
-    Merchandising Analytics Agent."""
-    async with stdio_client(_server_params()) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            result = await session.call_tool("read_query", {"query": sql})
-            text = result.content[0].text
-            try:
-                return json.loads(text)
-            except json.JSONDecodeError:
-                return [{"raw_result": text}]
+    internal cost/margin fields. Only ever intended for an internal
+    agent, never a customer-facing one."""
+    text = await _get_connection().call_tool("read_query", {"query": sql})
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return [{"raw_result": text}]
 
 
 async def list_tables() -> list[str]:
-    async with stdio_client(_server_params()) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            result = await session.call_tool("list_tables", {})
-            try:
-                return json.loads(result.content[0].text)
-            except json.JSONDecodeError:
-                return []
+    text = await _get_connection().call_tool("list_tables", {})
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return []

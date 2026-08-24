@@ -127,7 +127,7 @@ except Exception:
 
 # --- MAIN PORTAL HEADER ---
 header(
-    "🏔️ NorthPeak Retail Employee Portal",
+    " NorthPeak Retail Employee Portal",
     "Central internal operations hub for support, merchandising, analytics, and workflow management.",
 )
 

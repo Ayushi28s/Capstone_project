@@ -12,6 +12,7 @@ import logging
 import time
 
 import redis
+from prometheus_client import start_http_server
 
 from app.agents.graph import get_graph
 from app.config import settings
@@ -43,7 +44,18 @@ def process_job(
             node = state.get("current_node", "")
             t0 = time.time()
             update_job(session_id, status="running", current_node=node, progress_pct=state.get("progress_pct", 0))
-            record_node_latency(node or "unknown", time.time() - t0)
+            # stream_mode="values" yields the state right after START,
+            # before the first real node has run and set current_node —
+            # that first yield has an empty node, and recording it as
+            # "unknown" measured nothing but loop overhead, not any
+            # real node's execution time. Confirmed live: a real run
+            # showed a spurious node="unknown" bucket with a near-zero
+            # duration on every single request, polluting Grafana's
+            # per-node latency panel with a phantom series. Skipping
+            # the empty case here is the fix — every real node still
+            # records normally.
+            if node:
+                record_node_latency(node, time.time() - t0)
 
             if node == "intent_router" and state.get("intent"):
                 record_intent(state["intent"], state.get("used_llm_fallback", False))
@@ -74,6 +86,24 @@ def process_job(
 
 def main() -> None:
     init_db()
+
+    # Real bug fix, not a stylistic choice: prometheus_client's default
+    # registry is per-process. The backend (uvicorn) and this worker
+    # are two separate OS processes — record_node_latency/record_intent/
+    # record_request_outcome, called only here, were incrementing
+    # counters that lived exclusively in THIS process's memory, which
+    # the backend's /metrics endpoint (a different process) could never
+    # see. Confirmed live: dozens of real requests showed up correctly
+    # in the guardrail_events table (genuinely shared, via SQLite) but
+    # zero requests ever showed up in Prometheus, because nothing about
+    # the metrics themselves was ever shared across the process
+    # boundary. Serving this worker's own registry on its own port,
+    # scraped by Prometheus as a second target (see
+    # monitoring/prometheus.yml), is what actually closes that gap —
+    # not a Grafana/dashboard change, a genuine second scrape target.
+    start_http_server(settings.WORKER_METRICS_PORT)
+    logger.info("Worker metrics server listening on port %s.", settings.WORKER_METRICS_PORT)
+
     r = redis.from_url(settings.REDIS_URL, decode_responses=True)
     logger.info("Worker started. Watching queue '%s'.", settings.JOB_QUEUE_KEY)
     while True:

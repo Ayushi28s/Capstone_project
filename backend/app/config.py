@@ -75,6 +75,7 @@ class Settings:
     PHOENIX_ENABLED: bool = os.environ.get("PHOENIX_ENABLED", "false").lower() == "true"
     PHOENIX_COLLECTOR_ENDPOINT: str = os.environ.get("PHOENIX_COLLECTOR_ENDPOINT", "http://localhost:6006/v1/traces")
     OTEL_EXPORTER_PROMETHEUS_PORT: int = int(os.environ.get("OTEL_EXPORTER_PROMETHEUS_PORT", 9464))
+    WORKER_METRICS_PORT: int = int(os.environ.get("WORKER_METRICS_PORT", 9100))
 
     # --- App ---
     APP_ENV: str = os.environ.get("APP_ENV", "development")

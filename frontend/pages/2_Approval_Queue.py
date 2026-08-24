@@ -15,7 +15,7 @@ from style import get_identity, header, inject
 
 st.set_page_config(page_title="CommerceOps AI | Approval Queue", page_icon="✅", layout="wide")
 inject()
-header("✅ Human Approval Queue", "Refunds ≥ $250 and flagged anomalies pause here until a manager decides.")
+header("Human Approval Queue", "Refunds ≥ $250 and flagged anomalies pause here until a manager decides.")
 
 with st.sidebar:
     employee_name, employee_role, role_label = get_identity()

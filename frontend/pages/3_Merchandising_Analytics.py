@@ -12,7 +12,7 @@ from style import get_identity, header, inject, safe_markdown
 
 st.set_page_config(page_title="CommerceOps AI | Merchandising Analytics", page_icon="📊", layout="wide")
 inject()
-header("📊 Merchandising Analytics", "Self-serve sales & inventory questions — replaces the weekly manual report.")
+header("Merchandising Analytics", "Self-serve sales & inventory questions — replaces the weekly manual report.")
 
 st.info(
     "Internal tool. This agent has legitimate access to wholesale cost and margin data for "

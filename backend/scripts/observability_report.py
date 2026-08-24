@@ -57,25 +57,34 @@ def print_guardrail_events(limit: int) -> None:
     print("\nAction breakdown:", ", ".join(f"{k}={v}" for k, v in sorted(action_counts.items())))
 
 
-def print_prometheus_metrics() -> None:
-    _print_header("PROMETHEUS METRICS (live, fetched from the backend's own /metrics endpoint)")
-    url = f"http://localhost:{settings.API_PORT}/metrics"
+def _fetch_and_print_metrics(label: str, url: str) -> None:
     try:
         resp = requests.get(url, timeout=5)
         resp.raise_for_status()
     except Exception as exc:
-        print(f"Couldn't reach {url} — is the backend running? ({exc})")
+        print(f"  [{label}] Couldn't reach {url} — is that process running? ({exc})")
         return
 
-    relevant_prefixes = ("commerceops_",)
-    lines = [l for l in resp.text.splitlines() if l.startswith(relevant_prefixes) and not l.startswith("#")]
+    lines = [l for l in resp.text.splitlines() if l.startswith("commerceops_") and not l.startswith("#")]
     if not lines:
-        print("Backend is reachable but no commerceops_* metrics have been recorded yet — "
-              "submit a request through the Chat Console first.")
+        print(f"  [{label}] Reachable, but no commerceops_* metrics recorded yet from this process.")
         return
     for line in lines:
-        print(f"  {line}")
-    print(f"\nFull raw output: curl {url}")
+        print(f"  [{label}] {line}")
+
+
+def print_prometheus_metrics() -> None:
+    _print_header("PROMETHEUS METRICS (live, fetched directly from both processes)")
+    print(
+        "The backend (uvicorn) and the worker are separate OS processes, each with its own "
+        "in-memory Prometheus registry — node latency, intent, and request-outcome metrics "
+        "are only ever recorded inside the worker, so checking the backend's endpoint alone "
+        "misses almost all of them. Checking both here, not just one."
+    )
+    _fetch_and_print_metrics("backend", f"http://localhost:{settings.API_PORT}/metrics")
+    _fetch_and_print_metrics("worker", f"http://localhost:{settings.WORKER_METRICS_PORT}/metrics")
+    print(f"\nFull raw output: curl http://localhost:{settings.API_PORT}/metrics"
+          f"  and  curl http://localhost:{settings.WORKER_METRICS_PORT}/metrics")
 
 
 def print_tracing_status() -> None:
