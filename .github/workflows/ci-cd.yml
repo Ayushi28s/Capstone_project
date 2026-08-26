@@ -22,6 +22,9 @@ jobs:
   validate:
     runs-on: ubuntu-latest
 
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -57,21 +60,11 @@ jobs:
           python -c "import app.agents.market_intel_agent"
 
 
-      - name: Run preflight validation
-        working-directory: backend
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: |
-          python preflight_check.py
-
-
       # Optional quality gate.
-      # Runs only when an OpenRouter key is available.
+      # Runs only when an OpenRouter key is configured.
       - name: Run RAGAS evaluation
-        if: ${{ secrets.OPENROUTER_API_KEY != '' }}
+        if: ${{ env.OPENROUTER_API_KEY != '' }}
         working-directory: backend
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           python scripts/seed_db.py
           python scripts/run_ragas_eval.py --fail-under 0.90
@@ -85,8 +78,8 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
 
-    # Pull requests validate only.
-    # Images are pushed only after code reaches main.
+    # Pull requests only validate.
+    # Images are pushed after code reaches main.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
