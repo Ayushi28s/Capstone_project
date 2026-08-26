@@ -1,23 +1,3 @@
-"""
-Input rail: runs every inbound chat message through NeMo Guardrails
-before any downstream LLM call happens.
-
-As of NeMo Guardrails 0.23.x, the OpenAI-compatible client's endpoint is
-NOT read from an OPENAI_API_BASE env var — it's set via
-parameters.base_url on the model entry in nemo_config/config.yml. Only
-the API key still resolves from the OPENAI_API_KEY env var, so that's
-the only redirection this module needs to do.
-
-Each Colang flow in nemo_config/rails.co ends its bot turn with a
-distinct, fixed refusal line (see rails.co's `bot refuse ...` /
-`bot flag ...` definitions). Matching against those specific lines
-— rather than one generic "was anything blocked" bucket — is what lets
-this module report WHICH flow actually fired: guardrail_events, the
-Security Red-Team Console, and any operator reading the audit log can
-all tell a jailbreak attempt apart from an authority-bypass claim
-apart from a prompt-injection attempt, instead of everything collapsing
-into an undifferentiated "input_rail: blocked".
-"""
 import os
 from dataclasses import dataclass
 

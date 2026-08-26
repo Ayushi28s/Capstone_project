@@ -1,8 +1,3 @@
-"""
-Node functions for the CommerceOps AI Supervisor StateGraph. Each is a
-plain function of (state) -> partial state update, testable in
-isolation before the full graph is wired together.
-"""
 from app.agents.intent_router import classify_intent
 from app.agents.knowledge_agent import ask_knowledge_agent
 from app.agents.market_intel_agent import run_market_intel_agent

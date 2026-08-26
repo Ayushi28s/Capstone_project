@@ -1,12 +1,3 @@
-"""
-One-time setup: seeds synthetic customers, products, orders, sales, and
-tickets into SQLite, then trains the intent classifier, builds the
-ChromaDB policy index, and builds the knowledge graph — everything the
-system needs before it can handle its first real request.
-
-    python scripts/seed_db.py
-"""
-
 import sys
 from pathlib import Path
 

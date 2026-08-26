@@ -1,37 +1,3 @@
-"""
-Persistent MCP client connections — one subprocess + session per
-server, opened once and reused for every tool call, instead of
-spawning a fresh subprocess and tearing the whole thing down on every
-single call.
-
-This is the deeper fix behind "unhandled errors in a TaskGroup"
-failures that persisted even after switching to a shared, persistent
-event loop (_event_loop.py): that earlier fix addressed the outer event
-loop being recreated per call, but every MCP client function was still
-opening `async with stdio_client(...)` fresh, spawning a brand new
-subprocess, and tearing the whole thing down (subprocess included) on
-every single call — regardless of whether the surrounding event loop
-persisted. Repeated subprocess spawn/teardown against Windows'
-ProactorEventLoop, not just event-loop churn, is the more likely actual
-source of the race. This keeps one subprocess and one MCP session alive
-for the worker process's whole lifetime instead, started lazily on
-first use.
-
-IMPORTANT — everything in this module is async and must only ever be
-awaited from a coroutine that's already running on the shared
-persistent loop (see _event_loop.py). It deliberately does NOT do any
-cross-thread dispatch (run_coroutine_threadsafe) internally — only
-_event_loop.run_async() does that, exactly once, at the top level, when
-a caller like support_crew.py's synchronous CrewAI tool functions first
-hand off a coroutine to the persistent loop's thread. If this module's
-own connection-startup logic also tried to cross-thread-dispatch-and-
-block-wait for itself, it would deadlock the instant it's called from
-inside a coroutine that's already executing ON that loop's thread —
-the loop can't make progress on starting the connection while its own
-thread is blocked waiting for that same connection to start. Staying
-purely `await`-based here, with only ONE cross-thread handoff at the
-very top of the call chain, is what avoids that.
-"""
 import asyncio
 from typing import Any, Optional
 

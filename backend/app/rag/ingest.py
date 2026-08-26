@@ -1,10 +1,3 @@
-"""
-Ingests the policy document library into ChromaDB. This is what the
-Knowledge Agent retrieves against for cited product/policy answers.
-
-Run standalone:
-    python -m app.rag.ingest
-"""
 import glob
 import os
 import uuid

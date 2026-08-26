@@ -1,15 +1,3 @@
-"""
-Knowledge Agent: answers product/policy questions with citations, and
-decides for itself whether a question needs a flat policy-document
-search (vector RAG) or a cross-record graph traversal (GraphRAG) —
-"which customers have a return pattern on this SKU" cannot be answered
-by finding one similar text chunk, it requires walking the knowledge
-graph built in app/graph_rag/build_graph.py.
-
-Built with langchain.agents.create_agent (Module 6) rather than a fixed
-retrieval sequence, so the tool choice is the model's decision, not
-hand-coded branching.
-"""
 from langchain.agents import create_agent
 from langchain_core.tools import tool
 

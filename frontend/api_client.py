@@ -1,7 +1,3 @@
-"""
-Thin wrapper around the CommerceOps AI FastAPI backend. Every page
-imports from here instead of calling `requests` directly.
-"""
 import json
 import os
 import uuid

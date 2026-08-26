@@ -1,7 +1,3 @@
-"""
-NorthPeak Retail — Aesthetic Minimalist Web Identity.
-Inspired by modern luxury storefront designs (Assemble palette).
-"""
 import streamlit as st
 
 # Assemble Aesthetic Warm Palette

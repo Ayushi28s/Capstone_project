@@ -1,28 +1,3 @@
-"""
-Support Triage Crew for NorthPeak CommerceOps AI.
-
-The top-level Supervisor routes broad support requests into this module.
-
-Inside the support domain, this module performs a lightweight,
-deterministic sub-route into one of three specialist workflows:
-
-- Order Status Specialist
-- Refund Specialist
-- Billing Dispute Specialist
-
-CrewAI is still used for specialist execution, tool use, and structured
-output, but specialist selection no longer depends on hierarchical
-delegation.
-
-This prevents refund requests from being handled by the Order Status
-Specialist, which does not have access to the refund-decision tool.
-
-Refund approval is enforced deterministically in Python:
-- refunds at or above the configured threshold require HITL approval
-- repeated rapid sub-threshold refunds can trigger anomaly review
-- approval flags are accepted only for genuine refund results
-"""
-
 import asyncio
 import json
 import re

@@ -1,9 +1,3 @@
-"""
-Central configuration for CommerceOps AI.
-
-All tunables live here so nodes/agents/tests import one source of truth
-instead of scattering os.environ.get() calls across the codebase.
-"""
 import os
 from dotenv import load_dotenv
 

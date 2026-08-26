@@ -1,27 +1,3 @@
-"""
-Output guard: the last checkpoint before ANY response reaches a user.
-
-Two layers, both applied to every response regardless of which agent
-produced it:
-
-1. Schema validation — whichever Pydantic model matches the intent
-   (OrderStatusResult, RefundDecision, PolicyAnswer, ...) must actually
-   validate via Guard.for_pydantic. A malformed agent output fails
-   loudly here instead of shipping something broken to the console.
-2. A universal text screen on the final rendered response: a custom
-   professional-tone validator (no Guardrails Hub account needed — see
-   below) PLUS a second pass of cost-data scrubbing, since an LLM can
-   restate a wholesale cost number in its own words even after the
-   input-side check already ran once.
-
-The tone check is a CUSTOM validator, not Guardrails Hub's
-ToxicLanguage. Hub validators aren't bundled with the pip package —
-they're fetched via `guardrails hub install hub://...`, which needs a
-separate Guardrails AI account, an API token, and a HuggingFace model
-download. A custom @register_validator has none of that and routes
-through the same OpenRouter connection every other call in this project
-uses.
-"""
 import json
 from typing import Type, TypeVar
 

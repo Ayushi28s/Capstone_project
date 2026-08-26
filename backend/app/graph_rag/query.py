@@ -1,14 +1,3 @@
-"""
-Multi-hop traversal over the customer/order/product/ticket knowledge
-graph. This answers the class of question flat vector RAG structurally
-cannot: "which customers have a return pattern on this SKU" needs to
-walk Product -> Order (RETURNED) -> Customer across every matching
-order, not find one similar text chunk.
-
-Kept intentionally simple (breadth-first neighborhood + LLM synthesis)
-rather than a general-purpose graph query language — the graph is small
-enough that ego-graph traversal is both sufficient and easy to audit.
-"""
 import networkx as nx
 from langchain_core.messages import HumanMessage, SystemMessage
 

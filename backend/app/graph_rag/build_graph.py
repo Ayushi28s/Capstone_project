@@ -1,21 +1,3 @@
-"""
-Builds the customer <-> order <-> product <-> ticket knowledge graph
-that GraphRAG traverses for cross-record questions like "which
-customers have a return pattern on this SKU" or "show this customer's
-full order and ticket history across products" — the kind of question a
-flat vector search over policy text structurally cannot answer, because
-the answer lives in the relationships between real data rows, not in
-any single document.
-
-Unlike a document-derived graph, this one is built directly from the
-structured SQLite tables (orders, products, tickets, customers) via
-NetworkX — no LLM extraction step needed, since the relationships are
-already explicit as foreign keys. This is deliberately simpler and more
-reliable than LLM-based relationship extraction would be here.
-
-Run standalone:
-    python -m app.graph_rag.build_graph
-"""
 import json
 
 import networkx as nx

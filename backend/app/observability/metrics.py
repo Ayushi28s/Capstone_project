@@ -1,7 +1,3 @@
-"""
-Prometheus metrics for CommerceOps AI, scraped by the Prometheus
-container and visualized by the pre-provisioned Grafana dashboard.
-"""
 from prometheus_client import Counter, Histogram
 
 NODE_LATENCY_SECONDS = Histogram(

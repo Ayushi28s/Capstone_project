@@ -1,26 +1,3 @@
-"""
-Terminal-only observability report. This replaces the removed
-Observability Streamlit page — nothing in the frontend surfaces
-guardrail events, tracing status, or metrics anymore; this script is
-now the only way to check them, run directly from a terminal.
-
-Covers all four observability tools without needing a browser for the
-two that support a pure-terminal check:
-  - Guardrail events: read straight from SQLite (app/db.py).
-  - Prometheus metrics: fetched live from the backend's own /metrics
-    endpoint via a plain HTTP GET — no browser, no separate curl needed.
-  - LangSmith: config status only (it's a hosted SaaS with its own web
-    UI — this script tells you whether tracing is even enabled, not a
-    replacement for opening smith.langchain.com directly).
-  - Arize Phoenix: config status only, same reasoning — it's a
-    self-hosted web app, this reports whether it's receiving traces at
-    all, not a replacement for opening its own UI.
-
-Usage:
-    python scripts/observability_report.py                # one-shot report
-    python scripts/observability_report.py --events 50    # show more guardrail events
-    python scripts/observability_report.py --watch 10     # re-print every 10s
-"""
 import argparse
 import sys
 import time

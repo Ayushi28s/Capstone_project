@@ -1,20 +1,3 @@
-"""
-RAGAS faithfulness evaluation for the Knowledge Agent's RAG pipeline —
-the CI gate that fails the build if answer quality regresses below the
-0.90 faithfulness bar the capstone brief requires.
-
-COMPATIBILITY NOTE: ragas hard-imports
-langchain_community.chat_models.vertexai at module load time, even
-though this project never uses VertexAI (OpenRouter-only). That import
-path was removed from langchain-community in the 0.4.x line this
-project needs for SQLDatabaseToolkit under langchain 1.3.x. Since the
-VertexAI integration is genuinely unused here, the fix is a harmless
-sys.modules stub — not a downgrade that would break the SQL agent, and
-not a fork of ragas itself. This is applied once, at the top of this
-script, before ragas is imported anywhere.
-
-    python scripts/run_ragas_eval.py --fail-under 0.90
-"""
 import argparse
 import sys
 import types

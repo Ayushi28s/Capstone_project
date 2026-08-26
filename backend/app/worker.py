@@ -1,12 +1,3 @@
-"""
-Background worker for CommerceOps AI. The FastAPI /chat endpoint only
-queues the message; this worker drives the actual Supervisor graph run,
-updating the jobs table after every node so the frontend's progress bar
-reflects real state, not a fake spinner.
-
-Run standalone:
-    python -m app.worker
-"""
 import json
 import logging
 import time

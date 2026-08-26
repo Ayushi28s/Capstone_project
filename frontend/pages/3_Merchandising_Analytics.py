@@ -1,14 +1,3 @@
-"""
-CommerceOps AI — Merchandising Analytics.
-
-Internal NorthPeak analytics workspace.
-
-This page sends merchandising questions through the same Supervisor
-pipeline used by the Chat Console, preserving guardrails, observability,
-and centralized routing while giving authorized employees a focused
-analytics workspace.
-"""
-
 import streamlit as st
 
 from api_client import (

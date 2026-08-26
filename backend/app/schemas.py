@@ -1,13 +1,3 @@
-"""
-Pydantic models shared across the API layer, the LangGraph nodes, and the
-CrewAI output_pydantic contracts.
-
-IMPORTANT: fields consumed as an output_pydantic target for an
-Anthropic-family model NEVER carry ge=/le= constraints — those render as
-minimum/maximum in the generated JSON Schema, which Anthropic's tool-use
-schema validator rejects. Numeric bounds are enforced in Python with the
-_clamp() helper instead.
-"""
 from datetime import datetime
 from typing import Literal, Optional
 

@@ -1,10 +1,3 @@
-"""
-Thin client for the NorthPeak Catalog MCP server.
-
-Each tool call creates its own MCP stdio session so the client remains
-compatible with asyncio.run()-based synchronous callers.
-"""
-
 import json
 import os
 import sys

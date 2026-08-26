@@ -1,13 +1,3 @@
-"""
-Retrieval layer over the policy document Chroma collection.
-
-Implements multi-query retrieval: the LLM proposes 2-3 reformulations of
-the input question, each is embedded and searched independently, and
-results are de-duplicated by chunk id. A customer asking "can I return
-worn boots" and one asking "used footwear refund eligibility" should
-both surface the same returns-policy chunk even though the wording
-barely overlaps.
-"""
 import json
 
 import chromadb

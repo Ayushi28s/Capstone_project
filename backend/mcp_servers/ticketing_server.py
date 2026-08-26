@@ -1,13 +1,3 @@
-"""
-Custom Ticketing MCP server for CommerceOps AI.
-
-Exposes ticket creation and lookup — used by the Support Triage Crew to
-log every interaction it handles, and by the billing-dispute agent
-specifically to escalate disputes it can't resolve automatically.
-
-Run standalone for debugging with the MCP Inspector:
-    npx @modelcontextprotocol/inspector python mcp_servers/ticketing_server.py
-"""
 import sqlite3
 import uuid
 from datetime import datetime

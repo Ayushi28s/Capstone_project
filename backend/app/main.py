@@ -1,8 +1,3 @@
-"""
-CommerceOps AI FastAPI backend. Thin by design — the real work happens
-in app.worker (the background pipeline) and app.agents.graph (the
-resumable Supervisor StateGraph).
-"""
 import asyncio
 import json
 import os

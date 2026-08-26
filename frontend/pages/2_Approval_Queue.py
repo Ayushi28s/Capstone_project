@@ -1,12 +1,3 @@
-"""
-CommerceOps AI — Approval Queue.
-
-Sessions paused at LangGraph's human approval gate appear here.
-
-Only Operations Managers can approve or reject requests. The logged-in
-employee identity is used as the reviewer identity automatically.
-"""
-
 import streamlit as st
 
 from api_client import (

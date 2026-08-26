@@ -1,22 +1,3 @@
-"""
-Trains the lightweight intent classifier used by app/agents/intent_router.py.
-
-IMPORTANT — what this actually is: the curriculum's Module 17 LoRA
-content covers fine-tuning a LoRA adapter on top of an LLM, which needs
-a GPU and a training pipeline (HuggingFace PEFT) neither present nor
-practical in this project's runtime environment. What's built here
-instead is a TF-IDF + Logistic Regression classifier — a genuinely
-real, trained, working model that demonstrates the SAME architectural
-pattern Module 17 teaches (a small, cheap, fast classifier making the
-routing decision instead of paying full LLM cost for it), without
-claiming to be a fine-tuned transformer. The Solution Guide is explicit
-about this substitution. Swapping this for a true LoRA-fine-tuned
-classifier head later is a drop-in change — only intent_router.py's
-_classify() function would need to change, not anything that calls it.
-
-Run standalone:
-    python scripts/train_intent_router.py
-"""
 import sys
 from pathlib import Path
 
@@ -29,10 +10,6 @@ from sklearn.pipeline import Pipeline
 
 from app.config import settings
 
-# Synthetic labeled training examples. A handful of paraphrases per
-# intent is enough for TF-IDF + logistic regression to separate these
-# six categories cleanly — this is deliberately not trying to be a
-# general-purpose NLU model, just a fast first-pass sorter.
 TRAINING_EXAMPLES = [
     # order_status
     ("Where's my order #NP-88213?", "order_status"),

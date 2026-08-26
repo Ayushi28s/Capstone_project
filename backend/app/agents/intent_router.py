@@ -1,14 +1,3 @@
-"""
-Runtime intent router. Loads the lightweight classifier trained by
-scripts/train_intent_router.py and classifies each incoming message in
-milliseconds — no LLM call, no network round-trip. If confidence is
-below CONFIDENCE_THRESHOLD, falls back to a single cheap LLM call
-instead of trusting a low-confidence guess, since a wrong route sends
-the request to the wrong agent entirely.
-
-See scripts/train_intent_router.py for why this is a TF-IDF + Logistic
-Regression classifier rather than a true LoRA-fine-tuned model.
-"""
 import json
 import os
 

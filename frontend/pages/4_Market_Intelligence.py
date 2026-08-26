@@ -1,13 +1,3 @@
-"""
-CommerceOps AI — Market Intelligence.
-
-Internal NorthPeak research workspace.
-
-Employees request competitive and market analysis while the Market
-Intelligence Agent executes the plan → research → reflect workflow
-through the same Supervisor pipeline used elsewhere in CommerceOps AI.
-"""
-
 import streamlit as st
 
 from api_client import (

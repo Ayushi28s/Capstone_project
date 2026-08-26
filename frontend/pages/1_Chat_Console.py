@@ -1,17 +1,3 @@
-"""
-CommerceOps AI — Chat Console.
-
-Internal NorthPeak employee tool.
-
-Support, merchandising, and operations staff describe what they need
-in natural language. The Supervisor Orchestrator classifies the request
-and routes it to the appropriate workflow automatically.
-
-Customer and order identifiers are extracted from the current request
-when present. Employees do not need to duplicate request context in
-separate sidebar fields.
-"""
-
 import re
 
 import streamlit as st

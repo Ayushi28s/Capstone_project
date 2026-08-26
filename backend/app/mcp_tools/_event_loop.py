@@ -1,25 +1,3 @@
-"""
-Runs async MCP client calls from CrewAI's synchronous tool functions,
-via ONE persistent background event loop shared for the whole process's
-lifetime — not a fresh event loop created and torn down on every single
-call.
-
-Why this matters specifically: MCP's stdio_client() uses anyio's
-TaskGroup internally to manage the subprocess's stdin/stdout
-reader/writer tasks concurrently with the session logic. asyncio.run()
-tears its event loop down immediately after the coroutine returns; on
-Windows specifically (which needs ProactorEventLoop for subprocess
-support), that teardown can race against the TaskGroup's own subprocess
-cleanup still finishing up, surfacing as "unhandled errors in a
-TaskGroup." This didn't show up until after the earlier Windows
-subprocess-launch fix (using sys.executable instead of a bare "python"
-string) — before that fix, the subprocess failed to start immediately,
-before the TaskGroup ever reached real concurrent work that could race
-on teardown. Fixing the launch bug is what surfaced this one
-underneath it. A single long-lived loop, reused for every call instead
-of recreated each time, avoids the repeated create/teardown cycle
-entirely.
-"""
 import asyncio
 import atexit
 import threading

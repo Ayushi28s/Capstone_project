@@ -1,9 +1,3 @@
-"""
-Run before starting the API or the worker so a bad or missing setup
-surfaces as one clean error instead of failing deep inside a graph node.
-
-    python preflight_check.py
-"""
 import os
 import sys
 

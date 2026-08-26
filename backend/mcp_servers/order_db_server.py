@@ -1,15 +1,3 @@
-"""
-Custom Order DB MCP server for CommerceOps AI.
-
-Exposes exactly three read-only tools against the orders/customers
-tables. This is what the order-status and refund/billing agents in the
-Support Triage Crew call — nothing else in the system is wired to this
-server, so "give this agent write access to orders" isn't even a
-question that comes up.
-
-Run standalone for debugging with the MCP Inspector:
-    npx @modelcontextprotocol/inspector python mcp_servers/order_db_server.py
-"""
 import sqlite3
 
 from mcp.server.fastmcp import FastMCP

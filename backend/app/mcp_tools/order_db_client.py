@@ -1,13 +1,3 @@
-"""
-Thin client for the custom NorthPeak Order DB MCP server.
-
-Each call creates a short-lived MCP stdio session.
-
-The MCP server is launched as a Python module from the backend
-directory. This ensures imports such as `from app.config import
-settings` work correctly inside the child process.
-"""
-
 import json
 import os
 import sys

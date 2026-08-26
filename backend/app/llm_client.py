@@ -1,14 +1,3 @@
-"""
-Shared LLM client factory. Every node, tool, and CrewAI agent in
-CommerceOps AI pulls its model from here. OpenRouter is the only
-provider — no native OpenAI or Anthropic SDK is used anywhere in this
-project (langchain-openai's ChatOpenAI pointed at OpenRouter's
-OpenAI-compatible endpoint).
-
-max_tokens is ALWAYS set explicitly and tuned per role. Leaving it unset
-causes OpenRouter to reserve the model's full output window against the
-account's credit balance, which surfaces as a 402 error on smaller keys.
-"""
 from crewai import LLM as CrewAILLM
 from langchain_openai import ChatOpenAI
 

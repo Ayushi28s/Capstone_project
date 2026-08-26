@@ -1,14 +1,3 @@
-"""
-SQLite persistence for CommerceOps AI.
-
-Deliberately not an ORM — the project already leans on ChromaDB, a
-NetworkX knowledge graph, and Redis, so the operational data stays plain
-SQL and inspectable. This same commerceops.db file is also what the
-custom Order DB / Catalog MCP servers and the SQLite ecosystem MCP
-server expose to agents (each scoped to different tables — see
-mcp_servers/), and what the Merchandising Analytics Agent's SQL tool
-queries directly.
-"""
 import json
 import sqlite3
 from contextlib import contextmanager

@@ -1,17 +1,3 @@
-"""
-PII and internal-cost-data redaction.
-
-Two distinct concerns, checked separately:
-1. Customer PII (names, emails, phones, cards) via Presidio — standard
-   privacy protection.
-2. Internal cost/wholesale-pricing data — NOT personal information, but
-   leaking it is the exact failure mode that triggered this project (the
-   old FAQ bot leaked SKU cost data through a crafted prompt). Checked
-   with a dedicated pattern match, not folded into the PII entity list,
-   because it's a different risk category with a different owner
-   (Finance/Merchandising, not Security/Privacy) even though both route
-   through the same redaction step.
-"""
 import re
 from dataclasses import dataclass
 

@@ -1,27 +1,3 @@
-"""
-Client wrapper for the ECOSYSTEM SQLite MCP server — the real,
-pre-built `mcp-server-sqlite` package (pip install mcp-server-sqlite),
-not a custom reimplementation. This is the second of the two "ecosystem
-server" integrations the curriculum asks for (the first is the GitHub
-MCP server in github_client.py).
-
-Uses ONE persistent subprocess + MCP session for the whole worker
-process's lifetime — see _persistent_session.py's module docstring for
-the full reasoning. Not currently wired into any agent (Merchandising
-Analytics uses SQLDatabaseToolkit directly, a synchronous LangChain
-tool, not this client) — fixed to the same pattern anyway so a future
-feature wiring this in doesn't silently inherit the per-call subprocess
-spawn/teardown bug.
-
-Unlike the custom Order DB / Catalog servers, this server has NO
-built-in field-level scoping — read_query runs any SELECT statement
-against the whole database, including products.wholesale_cost_usd.
-That's fine here specifically because this client would only ever be
-wired to an internal-only agent, never a customer-facing flow.
-
-Launch the real server standalone for debugging:
-    mcp-server-sqlite --db-path ./data/commerceops.db
-"""
 import json
 import os
 import sys

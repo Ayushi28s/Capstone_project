@@ -1,25 +1,3 @@
-"""
-Observability bootstrap for the NorthPeak Operations Copilot.
-
-This module initializes three observability paths:
-
-1. LangSmith
-   - Cloud tracing for LangChain and LangGraph workflows.
-   - Enabled through LangSmith environment variables.
-
-2. Prometheus / OpenTelemetry Metrics
-   - Exposes application metrics consumed by Prometheus and Grafana.
-
-3. Arize Phoenix
-   - Receives OpenTelemetry traces from LangChain and LangGraph.
-   - Phoenix runs as a separate Docker service.
-   - OpenInference instruments LangChain/LangGraph callbacks so those
-     executions appear inside Phoenix.
-
-All integrations are optional. If an observability provider is disabled
-or unavailable, the application continues running.
-"""
-
 import logging
 import os
 

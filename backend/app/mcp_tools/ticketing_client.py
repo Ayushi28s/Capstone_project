@@ -1,10 +1,3 @@
-"""
-Thin client for the custom NorthPeak Ticketing MCP server.
-
-Each invocation uses its own short-lived MCP stdio session so it can
-safely be called through asyncio.run() from synchronous CrewAI tools.
-"""
-
 import json
 import os
 import sys
