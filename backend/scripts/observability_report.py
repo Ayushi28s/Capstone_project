@@ -92,7 +92,7 @@ def print_tracing_status() -> None:
     if settings.LANGCHAIN_TRACING_V2 == "true":
         print(f"  Status:  ENABLED")
         print(f"  Project: {settings.LANGCHAIN_PROJECT}")
-        print(f"  Dashboard: https://smith.langchain.com/o/-/projects/p/{settings.LANGCHAIN_PROJECT}")
+        print("  Dashboard: open https://smith.langchain.com and select the configured project.")
     else:
         print("  Status: DISABLED — set LANGSMITH_API_KEY and LANGCHAIN_TRACING_V2=true in backend/.env to enable.")
 

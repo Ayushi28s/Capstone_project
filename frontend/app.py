@@ -220,20 +220,6 @@ with row2_col1:
     if st.button("Open Market Intel →", key="btn_market", use_container_width=True):
         st.switch_page("pages/4_Market_Intelligence.py")
 
-with row2_col2:
-    st.markdown(
-        """
-        <div class="portal-tile-white">
-            <div>
-                <div class="tile-title-clean"> Observability</div>
-                <div class="tile-desc-clean">Telemetry logs, system health metrics, NeMo guardrail events, and execution state.</div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    if st.button("Open Observability →", key="btn_obs", use_container_width=True):
-        st.switch_page("pages/5_Observability.py")
 
 # --- SIDEBAR PANEL ---
 with st.sidebar:
