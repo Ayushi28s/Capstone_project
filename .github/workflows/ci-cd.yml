@@ -7,14 +7,11 @@ on:
   pull_request:
     branches: [main]
 
-
 env:
   IMAGE_BACKEND: ${{ secrets.REGISTRY }}/${{ secrets.REGISTRY_USERNAME }}/commerceops-backend
   IMAGE_FRONTEND: ${{ secrets.REGISTRY }}/${{ secrets.REGISTRY_USERNAME }}/commerceops-frontend
 
-
 jobs:
-
   validate:
     runs-on: ubuntu-latest
 
@@ -58,7 +55,6 @@ jobs:
           python scripts/seed_db.py
           python scripts/run_ragas_eval.py --fail-under 0.90
 
-
   build-and-push:
     needs: validate
     runs-on: ubuntu-latest
@@ -93,8 +89,6 @@ jobs:
           tags: |
             ${{ env.IMAGE_FRONTEND }}:${{ github.sha }}
             ${{ env.IMAGE_FRONTEND }}:latest
-
-
 
   deploy:
     needs: build-and-push
