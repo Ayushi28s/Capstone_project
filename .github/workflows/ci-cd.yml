@@ -9,12 +9,11 @@ on:
 
 
 env:
-  IMAGE_BACKEND: ${{ secrets.REGISTRY }}/commerceops-backend
-  IMAGE_FRONTEND: ${{ secrets.REGISTRY }}/commerceops-frontend
+  IMAGE_BACKEND: ${{ secrets.REGISTRY }}/${{ secrets.REGISTRY_USERNAME }}/commerceops-backend
+  IMAGE_FRONTEND: ${{ secrets.REGISTRY }}/${{ secrets.REGISTRY_USERNAME }}/commerceops-frontend
 
 
 jobs:
-
 
   validate:
     runs-on: ubuntu-latest
@@ -26,12 +25,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
 
       - name: Install backend dependencies
         working-directory: backend
@@ -39,12 +36,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-
       - name: Compile backend Python files
         working-directory: backend
         run: |
           python -m compileall app mcp_servers scripts -q
-
 
       - name: Validate important imports
         working-directory: backend
@@ -56,9 +51,6 @@ jobs:
           python -c "import app.agents.merchandising_agent"
           python -c "import app.agents.market_intel_agent"
 
-
-      # Optional quality gate.
-      # Runs only when an OpenRouter key is configured.
       - name: Run RAGAS evaluation
         if: ${{ env.OPENROUTER_API_KEY != '' }}
         working-directory: backend
@@ -67,27 +59,22 @@ jobs:
           python scripts/run_ragas_eval.py --fail-under 0.90
 
 
-
   build-and-push:
     needs: validate
     runs-on: ubuntu-latest
 
-    # Pull requests only validate.
-    # Images are pushed after code reaches main.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-
-      - name: Log in to container registry
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           registry: ${{ secrets.REGISTRY }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
-
 
       - name: Build and push backend image
         uses: docker/build-push-action@v5
@@ -97,7 +84,6 @@ jobs:
           tags: |
             ${{ env.IMAGE_BACKEND }}:${{ github.sha }}
             ${{ env.IMAGE_BACKEND }}:latest
-
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v5
@@ -122,10 +108,8 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-
 
       - name: Deploy backend to Cloud Run
         id: deploy_backend
@@ -136,7 +120,6 @@ jobs:
           region: ${{ secrets.GCP_REGION }}
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-
       - name: Deploy frontend to Cloud Run
         id: deploy_frontend
         uses: google-github-actions/deploy-cloudrun@v2
@@ -146,19 +129,16 @@ jobs:
           region: ${{ secrets.GCP_REGION }}
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-
       - name: Show deployed URLs
         run: |
           echo "Backend URL: ${{ steps.deploy_backend.outputs.url }}"
           echo "Frontend URL: ${{ steps.deploy_frontend.outputs.url }}"
-
 
       - name: Smoke test deployed backend
         run: |
           sleep 15
           curl --fail --retry 5 --retry-delay 5 \
             "${{ steps.deploy_backend.outputs.url }}/health"
-
 
       - name: Smoke test deployed frontend
         run: |
