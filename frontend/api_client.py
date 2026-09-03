@@ -30,13 +30,32 @@ def _get_api_base_url() -> str:
 
     api_url = os.environ.get(
         "API_BASE_URL",
-        "http://localhost:8000",
+        "API_BASE_URL=http://127.0.0.1:8000",
     )
 
     return api_url.rstrip("/")
 
 
 API_BASE_URL = _get_api_base_url()
+
+
+def _raise_backend_error(resp: requests.Response) -> None:
+    """
+    Raise a readable error containing the backend status code
+    and response body.
+    """
+
+    if resp.ok:
+        return
+
+    try:
+        detail = resp.json()
+    except ValueError:
+        detail = resp.text
+
+    raise RuntimeError(
+        f"Backend returned HTTP {resp.status_code}: {detail}"
+    )
 
 
 def new_session_id() -> str:
@@ -48,7 +67,9 @@ def health() -> dict:
         f"{API_BASE_URL}/health",
         timeout=10,
     )
-    resp.raise_for_status()
+
+    _raise_backend_error(resp)
+
     return resp.json()
 
 
@@ -73,7 +94,8 @@ def submit_chat(
         timeout=30,
     )
 
-    resp.raise_for_status()
+    _raise_backend_error(resp)
+
     return resp.json()
 
 
@@ -85,7 +107,8 @@ def get_status(
         timeout=15,
     )
 
-    resp.raise_for_status()
+    _raise_backend_error(resp)
+
     return resp.json()
 
 
@@ -100,7 +123,8 @@ def get_response(
     if resp.status_code == 404:
         return None
 
-    resp.raise_for_status()
+    _raise_backend_error(resp)
+
     return resp.json()
 
 
@@ -110,7 +134,8 @@ def list_sessions() -> list[dict]:
         timeout=15,
     )
 
-    resp.raise_for_status()
+    _raise_backend_error(resp)
+
     return resp.json()
 
 
@@ -131,7 +156,8 @@ def approve_chat(
         timeout=30,
     )
 
-    resp.raise_for_status()
+    _raise_backend_error(resp)
+
     return resp.json()
 
 
@@ -152,7 +178,8 @@ def get_guardrail_events(
         timeout=15,
     )
 
-    resp.raise_for_status()
+    _raise_backend_error(resp)
+
     return resp.json()
 
 
@@ -169,7 +196,8 @@ def test_output_tone(
         timeout=30,
     )
 
-    resp.raise_for_status()
+    _raise_backend_error(resp)
+
     return resp.json()
 
 
@@ -182,7 +210,7 @@ def stream_status_events(
         timeout=None,
     )
 
-    resp.raise_for_status()
+    _raise_backend_error(resp)
 
     client = sseclient.SSEClient(resp)
 

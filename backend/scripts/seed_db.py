@@ -1,14 +1,11 @@
 import sys
 from pathlib import Path
-
 sys.path.insert(
     0,
     str(Path(__file__).resolve().parent.parent),
 )
 
 from app.db import get_conn, init_db
-
-
 CUSTOMERS = [
     (
         "CUST-001",
@@ -45,6 +42,44 @@ CUSTOMERS = [
         "Casey Kim",
         "casey.kim@example.com",
         "2025-03-12",
+    ),
+
+    
+    (
+        "CUST-007",
+        "Jordan Lee",
+        "jordan.lee@example.com",
+        "2024-01-18",
+    ),
+    (
+        "CUST-008",
+        "Priya Sharma",
+        "priya.sharma@example.com",
+        "2024-04-22",
+    ),
+    (
+        "CUST-009",
+        "Chris Wilson",
+        "chris.wilson@example.com",
+        "2025-02-08",
+    ),
+    (
+        "CUST-010",
+        "Avery Johnson",
+        "avery.johnson@example.com",
+        "2023-08-14",
+    ),
+    (
+        "CUST-011",
+        "Nina Kapoor",
+        "nina.kapoor@example.com",
+        "2024-12-03",
+    ),
+    (
+        "CUST-012",
+        "Daniel Foster",
+        "daniel.foster@example.com",
+        "2025-04-09",
     ),
 ]
 
@@ -98,11 +133,59 @@ PRODUCTS = [
         41.00,
         "Lightweight packable rain shell",
     ),
+
+
+    (
+        "SKU-66320",
+        "Glacier Trek Pant",
+        "bottoms",
+        110.00,
+        36.00,
+        "Stretch hiking trousers with reinforced knees",
+    ),
+    (
+        "SKU-71550",
+        "Everest Fleece Midlayer",
+        "mid_layers",
+        95.00,
+        31.00,
+        "Lightweight thermal fleece for cold-weather layering",
+    ),
+    (
+        "SKU-82440",
+        "Timberline Trekking Poles",
+        "equipment",
+        85.00,
+        27.00,
+        "Adjustable aluminium trekking poles with cork grips",
+    ),
+    (
+        "SKU-93560",
+        "Expedition Duffel 45L",
+        "accessories",
+        119.00,
+        39.00,
+        "Weather-resistant 45-liter expedition duffel bag",
+    ),
+    (
+        "SKU-24680",
+        "Highland Two-Person Tent",
+        "camping",
+        249.00,
+        91.00,
+        "Lightweight three-season tent for two people",
+    ),
+    (
+        "SKU-35790",
+        "Arctic Trail Gloves",
+        "accessories",
+        49.00,
+        14.00,
+        "Insulated waterproof gloves for winter trail use",
+    ),
 ]
 
 
-# Orders deliberately include a return pattern on SKU-88213 so the
-# GraphRAG cross-order return-pattern demo has real data to traverse.
 ORDERS = [
     (
         "NP-88213",
@@ -212,12 +295,116 @@ ORDERS = [
         280.00,
         "US-East",
     ),
+        (
+        "NP-66770",
+        "CUST-007",
+        "SKU-66320",
+        1,
+        "2026-06-23",
+        "delivered",
+        "UPS",
+        "2026-06-27",
+        110.00,
+        "US-East",
+    ),
+    (
+        "NP-77880",
+        "CUST-008",
+        "SKU-71550",
+        2,
+        "2026-06-24",
+        "shipped",
+        "FedEx",
+        "2026-06-29",
+        190.00,
+        "US-West",
+    ),
+    (
+        "NP-88990",
+        "CUST-009",
+        "SKU-82440",
+        1,
+        "2026-06-25",
+        "placed",
+        "UPS",
+        "2026-06-30",
+        85.00,
+        "US-East",
+    ),
+    (
+        "NP-99001",
+        "CUST-010",
+        "SKU-93560",
+        1,
+        "2026-06-26",
+        "delivered",
+        "DPD",
+        "2026-06-30",
+        119.00,
+        "EU",
+    ),
+    (
+        "NP-10110",
+        "CUST-011",
+        "SKU-24680",
+        1,
+        "2026-06-27",
+        "delivered",
+        "FedEx",
+        "2026-07-02",
+        249.00,
+        "US-West",
+    ),
+    (
+        "NP-20220",
+        "CUST-012",
+        "SKU-35790",
+        2,
+        "2026-06-28",
+        "shipped",
+        "UPS",
+        "2026-07-03",
+        98.00,
+        "US-East",
+    ),
+    (
+        "NP-30330",
+        "CUST-007",
+        "SKU-88213",
+        1,
+        "2026-06-29",
+        "returned",
+        "UPS",
+        "2026-07-03",
+        189.00,
+        "US-East",
+    ),
+    (
+        "NP-40440",
+        "CUST-008",
+        "SKU-55210",
+        1,
+        "2026-06-30",
+        "delivered",
+        "FedEx",
+        "2026-07-04",
+        140.00,
+        "US-West",
+    ),
+    (
+        "NP-50550",
+        "CUST-010",
+        "SKU-77410",
+        1,
+        "2026-07-01",
+        "returned",
+        "DPD",
+        "2026-07-05",
+        310.00,
+        "EU",
+    ),
 ]
 
-
-# Sales rows are separate from orders. They represent broader aggregate
-# sell-through used by the Merchandising Analytics Agent rather than
-# corresponding 1:1 with the individual orders above.
 SALES = [
     (
         "SKU-88213",
@@ -443,16 +630,9 @@ def seed_data() -> None:
 
 
 def main() -> None:
-    # ---------------------------------------------------------
-    # SQLite
-    # ---------------------------------------------------------
 
     init_db()
     seed_data()
-
-    # ---------------------------------------------------------
-    # RAG / Chroma
-    # ---------------------------------------------------------
 
     from app.rag.ingest import build_policy_index
 
@@ -463,10 +643,6 @@ def main() -> None:
     print(
         f"Indexed {n_chunks} policy chunks into Chroma."
     )
-
-    # ---------------------------------------------------------
-    # GraphRAG
-    # ---------------------------------------------------------
 
     from app.graph_rag.build_graph import (
         build_knowledge_graph,
@@ -482,10 +658,6 @@ def main() -> None:
         f"{graph.number_of_nodes()} nodes, "
         f"{graph.number_of_edges()} edges."
     )
-
-    # ---------------------------------------------------------
-    # Intent classifier
-    # ---------------------------------------------------------
 
     import subprocess
 

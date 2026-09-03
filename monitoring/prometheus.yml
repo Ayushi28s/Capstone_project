@@ -5,20 +5,12 @@ global:
 scrape_configs:
   - job_name: "commerceops-backend"
     static_configs:
-      - targets: ["backend:8000"]
+      - targets:
+          - "host.docker.internal:8000"
     metrics_path: /metrics
 
-  # Separate scrape target for the worker process. This is not
-  # redundant with the backend target above — node latency, intent
-  # classification, and request-outcome metrics are all recorded
-  # exclusively inside the worker (app/worker.py), a different OS
-  # process from the backend. prometheus_client's default registry is
-  # per-process, so those metrics never reach the backend's own
-  # /metrics endpoint at all; this second target is what actually
-  # exposes them. Only commerceops_hitl_decisions_total (recorded from
-  # the /approve endpoint, which runs inside the backend process) shows
-  # up on the backend target — everything else lives here.
   - job_name: "commerceops-worker"
     static_configs:
-      - targets: ["worker:9100"]
+      - targets:
+          - "host.docker.internal:9100"
     metrics_path: /metrics
