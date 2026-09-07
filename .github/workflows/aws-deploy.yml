@@ -188,10 +188,12 @@ jobs:
                 .command = [
                   "sh",
                   "-c",
-                  "python scripts/seed_db.py && chown -R commerceops:commerceops /app/data"
+                  "mkdir -p /app/data && cp -a /app/bootstrap_data/. /app/data/ && python scripts/seed_db.py && chown -R commerceops:commerceops /app/data"
                 ]
+
               elif .name == "backend" then
                 .image = $backend_image
+
               elif .name == "worker" then
                 .image = $backend_image
                 |
@@ -200,8 +202,10 @@ jobs:
                   "-m",
                   "app.worker"
                 ]
+
               elif .name == "frontend" then
                 .image = $frontend_image
+
               else
                 .
               end
