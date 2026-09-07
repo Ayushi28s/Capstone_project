@@ -14,7 +14,6 @@ env:
   ECS_CLUSTER: commerceops-cluster
   ECS_SERVICE: commerceops-service
   ECS_TASK_DEFINITION: commerceops-app-task
-  ECS_TASK_REVISION: "3"
 
 jobs:
   validate:
@@ -106,7 +105,6 @@ jobs:
         run: |
           python -c "import api_client"
 
-
   deploy:
     needs: validate
     runs-on: ubuntu-latest
@@ -157,19 +155,78 @@ jobs:
           docker push "$ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:${{ github.sha }}"
           docker push "$ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:latest"
 
-      - name: Verify task definition revision
+      - name: Download and prepare ECS task definition
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           aws ecs describe-task-definition \
-            --task-definition "$ECS_TASK_DEFINITION:$ECS_TASK_REVISION" \
+            --task-definition "$ECS_TASK_DEFINITION" \
             --region "$AWS_REGION" \
-            --query "taskDefinition.{Family:family,Revision:revision,Status:status}"
+            --query "taskDefinition" \
+            > task-definition-current.json
+
+          jq \
+            --arg backend_image "$ECR_REGISTRY/$ECR_BACKEND_REPOSITORY:${{ github.sha }}" \
+            --arg frontend_image "$ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:${{ github.sha }}" \
+            '
+            del(
+              .taskDefinitionArn,
+              .revision,
+              .status,
+              .requiresAttributes,
+              .compatibilities,
+              .registeredAt,
+              .registeredBy
+            )
+            |
+            .containerDefinitions |= map(
+              if .name == "seed" then
+                .image = $backend_image
+                |
+                .user = "0"
+                |
+                .command = [
+                  "sh",
+                  "-c",
+                  "python scripts/seed_db.py && chown -R commerceops:commerceops /app/data"
+                ]
+              elif .name == "backend" then
+                .image = $backend_image
+              elif .name == "worker" then
+                .image = $backend_image
+                |
+                .command = [
+                  "python",
+                  "-m",
+                  "app.worker"
+                ]
+              elif .name == "frontend" then
+                .image = $frontend_image
+              else
+                .
+              end
+            )
+            ' task-definition-current.json \
+            > task-definition-new.json
+
+      - name: Register new ECS task definition
+        id: register-task
+        run: |
+          TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://task-definition-new.json \
+            --region "$AWS_REGION" \
+            --query "taskDefinition.taskDefinitionArn" \
+            --output text)
+
+          echo "task_definition_arn=$TASK_DEF_ARN" >> "$GITHUB_OUTPUT"
+          echo "Registered task definition: $TASK_DEF_ARN"
 
       - name: Update ECS service
         run: |
           aws ecs update-service \
             --cluster "$ECS_CLUSTER" \
             --service "$ECS_SERVICE" \
-            --task-definition "$ECS_TASK_DEFINITION:$ECS_TASK_REVISION" \
+            --task-definition "${{ steps.register-task.outputs.task_definition_arn }}" \
             --force-new-deployment \
             --region "$AWS_REGION"
 
