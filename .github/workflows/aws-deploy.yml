@@ -1,0 +1,198 @@
+name: CommerceOps AI AWS Deploy
+
+on:
+  push:
+    branches:
+      - aws-deployment
+
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_BACKEND_REPOSITORY: commerceops-backend
+  ECR_FRONTEND_REPOSITORY: commerceops-frontend
+  ECS_CLUSTER: commerceops-cluster
+  ECS_SERVICE: commerceops-service
+  ECS_TASK_DEFINITION: commerceops-app-task
+  ECS_TASK_REVISION: "3"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      REDIS_URL: redis://localhost:6379/0
+      DATA_DIR: ./data
+      SQLITE_DB_PATH: ./data/commerceops.db
+      CHECKPOINT_DB_PATH: ./data/checkpoints.db
+      CHROMA_DIR: ./data/chroma
+      KNOWLEDGE_GRAPH_PATH: ./data/knowledge_graph.json
+      INTENT_ROUTER_MODEL_PATH: ./data/intent_router.joblib
+      MCP_SQLITE_DB_PATH: ./data/commerceops.db
+      PHOENIX_ENABLED: "false"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            backend/requirements.txt
+            frontend/requirements.txt
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m spacy download en_core_web_sm
+
+      - name: Compile backend
+        working-directory: backend
+        run: |
+          python -m compileall app mcp_servers scripts -q
+
+      - name: Validate backend imports
+        working-directory: backend
+        run: |
+          python -c "import app.main"
+          python -c "import app.worker"
+          python -c "import app.agents.support_crew"
+          python -c "import app.agents.knowledge_agent"
+          python -c "import app.agents.merchandising_agent"
+          python -c "import app.agents.market_intel_agent"
+
+      - name: Seed runtime data
+        working-directory: backend
+        run: |
+          python scripts/seed_db.py
+
+      - name: Run preflight check
+        working-directory: backend
+        run: |
+          python preflight_check.py
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile frontend
+        working-directory: frontend
+        run: |
+          python -m compileall . -q
+
+      - name: Validate frontend imports
+        working-directory: frontend
+        env:
+          API_BASE_URL: http://127.0.0.1:8000
+        run: |
+          python -c "import api_client"
+
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS identity
+        run: |
+          aws sts get-caller-identity
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push backend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build \
+            -t "$ECR_REGISTRY/$ECR_BACKEND_REPOSITORY:${{ github.sha }}" \
+            -t "$ECR_REGISTRY/$ECR_BACKEND_REPOSITORY:latest" \
+            ./backend
+
+          docker push "$ECR_REGISTRY/$ECR_BACKEND_REPOSITORY:${{ github.sha }}"
+          docker push "$ECR_REGISTRY/$ECR_BACKEND_REPOSITORY:latest"
+
+      - name: Build and push frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build \
+            -t "$ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:${{ github.sha }}" \
+            -t "$ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:latest" \
+            ./frontend
+
+          docker push "$ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:${{ github.sha }}"
+          docker push "$ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:latest"
+
+      - name: Verify task definition revision
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition "$ECS_TASK_DEFINITION:$ECS_TASK_REVISION" \
+            --region "$AWS_REGION" \
+            --query "taskDefinition.{Family:family,Revision:revision,Status:status}"
+
+      - name: Update ECS service
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --task-definition "$ECS_TASK_DEFINITION:$ECS_TASK_REVISION" \
+            --force-new-deployment \
+            --region "$AWS_REGION"
+
+      - name: Wait for ECS service stability
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --region "$AWS_REGION"
+
+      - name: Show ECS service status
+        if: always()
+        run: |
+          aws ecs describe-services \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --region "$AWS_REGION" \
+            --query "services[0].{
+              Status:status,
+              Desired:desiredCount,
+              Running:runningCount,
+              Pending:pendingCount,
+              TaskDefinition:taskDefinition,
+              DeploymentStatus:deployments[0].rolloutState,
+              Events:events[0:5]
+            }"
