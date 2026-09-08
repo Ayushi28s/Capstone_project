@@ -180,6 +180,7 @@ jobs:
             )
             |
             .containerDefinitions |= map(
+
               if .name == "seed" then
                 .image = $backend_image
                 |
@@ -194,12 +195,18 @@ jobs:
               elif .name == "backend" then
                 .image = $backend_image
                 |
-                .healthCheck.command = [
-                  "CMD",
-                  "python",
-                  "-c",
-                  "import urllib.request; urllib.request.urlopen('\''http://127.0.0.1:8000/health'\'', timeout=3)"
-                ]
+                .healthCheck = {
+                  "command": [
+                    "CMD",
+                    "python",
+                    "-c",
+                    "import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/health\", timeout=3)"
+                  ],
+                  "interval": 30,
+                  "timeout": 5,
+                  "retries": 3,
+                  "startPeriod": 60
+                }
 
               elif .name == "worker" then
                 .image = $backend_image
@@ -209,9 +216,35 @@ jobs:
                   "-m",
                   "app.worker"
                 ]
+                |
+                .healthCheck = {
+                  "command": [
+                    "CMD",
+                    "python",
+                    "-c",
+                    "import socket; s=socket.create_connection((\"127.0.0.1\", 9100), timeout=3); s.close()"
+                  ],
+                  "interval": 30,
+                  "timeout": 5,
+                  "retries": 3,
+                  "startPeriod": 30
+                }
 
               elif .name == "frontend" then
                 .image = $frontend_image
+                |
+                .healthCheck = {
+                  "command": [
+                    "CMD",
+                    "python",
+                    "-c",
+                    "import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8501/_stcore/health\", timeout=3)"
+                  ],
+                  "interval": 30,
+                  "timeout": 5,
+                  "retries": 3,
+                  "startPeriod": 60
+                }
 
               else
                 .
