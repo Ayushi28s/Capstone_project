@@ -193,6 +193,13 @@ jobs:
 
               elif .name == "backend" then
                 .image = $backend_image
+                |
+                .healthCheck.command = [
+                  "CMD",
+                  "python",
+                  "-c",
+                  "import urllib.request; urllib.request.urlopen('\''http://127.0.0.1:8000/health'\'', timeout=3)"
+                ]
 
               elif .name == "worker" then
                 .image = $backend_image
@@ -212,6 +219,20 @@ jobs:
             )
             ' task-definition-current.json \
             > task-definition-new.json
+
+      - name: Show prepared container configuration
+        run: |
+          jq '
+            .containerDefinitions[]
+            | {
+                name,
+                image,
+                user,
+                command,
+                healthCheck,
+                dependsOn
+              }
+          ' task-definition-new.json
 
       - name: Register new ECS task definition
         id: register-task

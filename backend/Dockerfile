@@ -33,11 +33,7 @@ COPY app ./app
 COPY mcp_servers ./mcp_servers
 COPY scripts ./scripts
 
-# Runtime data packaged in the image
 COPY data ./data
-
-# Separate bootstrap copy so ECS can still access the original
-# files after mounting a shared volume over /app/data
 COPY data ./bootstrap_data
 
 COPY preflight_check.py .
